@@ -150,7 +150,7 @@ export default function PortalHomePage() {
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
+    void (async () => {
       try {
         const snapshot = await fetchPortalSnapshot();
         if (cancelled) return;

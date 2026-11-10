@@ -29,7 +29,7 @@ export default function AdminPaymentMethodsPage() {
   }
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const me = await fetchMe();
         if (me.session.mfa_setup_only) {

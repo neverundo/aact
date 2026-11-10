@@ -20,7 +20,7 @@ export default function AdminBusinessesPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const me = await fetchMe();
         if (me.session.mfa_setup_only) {

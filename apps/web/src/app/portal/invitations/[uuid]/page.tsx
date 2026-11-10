@@ -39,7 +39,7 @@ function InvitationAcceptForm() {
 
     let cancelled = false;
 
-    (async () => {
+    void (async () => {
       try {
         const response = await apiFetch<{ data: Invitation }>(
           `/api/v1/invitations/${params.uuid}?token=${encodeURIComponent(token)}`,

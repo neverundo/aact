@@ -69,12 +69,14 @@ class ClamAvFileScanner implements FileScanner
 
     private function statusFromResponse(string $response): DocumentScanStatus
     {
-        if (str_contains($response, 'OK')) {
-            return DocumentScanStatus::Clean;
-        }
-
+        // FOUND before OK: signature names may contain "OK" (e.g. "….OK FOUND").
         if (str_contains($response, 'FOUND')) {
             return DocumentScanStatus::Infected;
+        }
+
+        // ClamAV clean reply is "stream: OK", not an arbitrary "OK" substring.
+        if (preg_match('/:\s*OK\b/', $response) === 1) {
+            return DocumentScanStatus::Clean;
         }
 
         return DocumentScanStatus::Unavailable;

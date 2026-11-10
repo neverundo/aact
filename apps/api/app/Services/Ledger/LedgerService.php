@@ -12,7 +12,6 @@ use App\Models\LedgerLine;
 use App\Models\PayoutRequest;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 class LedgerService
 {
@@ -21,7 +20,7 @@ class LedgerService
      */
     public function postCommissionAccrual(Commission $commission): LedgerEntry
     {
-        return $this->postBalancedEntry(
+        return $this->postBalancedEntry(new PostBalancedEntryData(
             businessId: $commission->business_id,
             idempotencyKey: 'commission_accrual:'.$commission->commercial_event_id,
             entryType: 'commission_accrual',
@@ -37,7 +36,7 @@ class LedgerService
             creditAccount: $this->ensurePayableAccount($commission->business_membership_id, $commission->business_id, $commission->currency),
             commercialEventId: $commission->commercial_event_id,
             commissionId: $commission->id,
-        );
+        ));
     }
 
     /**
@@ -48,7 +47,7 @@ class LedgerService
         int $amountMinor,
         int $reversalEventId,
     ): LedgerEntry {
-        return $this->postBalancedEntry(
+        return $this->postBalancedEntry(new PostBalancedEntryData(
             businessId: $commission->business_id,
             idempotencyKey: 'commission_reversal:event:'.$reversalEventId,
             entryType: 'commission_reversal',
@@ -64,7 +63,7 @@ class LedgerService
             ),
             commercialEventId: $reversalEventId,
             commissionId: $commission->id,
-        );
+        ));
     }
 
     /**
@@ -80,7 +79,7 @@ class LedgerService
             $payout->currency,
         );
 
-        return $this->postBalancedEntry(
+        return $this->postBalancedEntry(new PostBalancedEntryData(
             businessId: $payout->business_id,
             idempotencyKey: 'payout_settlement:'.$payout->id,
             entryType: 'payout_settlement',
@@ -90,7 +89,7 @@ class LedgerService
             creditAccount: $clearing,
             commercialEventId: null,
             commissionId: null,
-        );
+        ));
     }
 
     public function ensureAccount(
@@ -144,24 +143,15 @@ class LedgerService
         return $credits - $debits;
     }
 
-    private function postBalancedEntry(
-        int $businessId,
-        string $idempotencyKey,
-        string $entryType,
-        string $description,
-        int $amountMinor,
-        LedgerAccount $debitAccount,
-        LedgerAccount $creditAccount,
-        ?int $commercialEventId,
-        ?int $commissionId,
-    ): LedgerEntry {
-        if ($amountMinor <= 0) {
-            throw new RuntimeException('Ledger amount must be positive.');
+    private function postBalancedEntry(PostBalancedEntryData $data): LedgerEntry
+    {
+        if ($data->amountMinor <= 0) {
+            throw LedgerAmountException::mustBePositive();
         }
 
         $existing = LedgerEntry::query()
-            ->where('business_id', $businessId)
-            ->where('idempotency_key', $idempotencyKey)
+            ->where('business_id', $data->businessId)
+            ->where('idempotency_key', $data->idempotencyKey)
             ->with('lines')
             ->first();
 
@@ -170,55 +160,45 @@ class LedgerService
         }
 
         try {
-            return DB::transaction(function () use (
-                $businessId,
-                $idempotencyKey,
-                $entryType,
-                $description,
-                $amountMinor,
-                $debitAccount,
-                $creditAccount,
-                $commercialEventId,
-                $commissionId,
-            ) {
+            return DB::transaction(function () use ($data) {
                 $entry = LedgerEntry::query()->create([
-                    'business_id' => $businessId,
-                    'commercial_event_id' => $commercialEventId,
-                    'commission_id' => $commissionId,
-                    'entry_type' => $entryType,
-                    'idempotency_key' => $idempotencyKey,
-                    'description' => $description,
+                    'business_id' => $data->businessId,
+                    'commercial_event_id' => $data->commercialEventId,
+                    'commission_id' => $data->commissionId,
+                    'entry_type' => $data->entryType,
+                    'idempotency_key' => $data->idempotencyKey,
+                    'description' => $data->description,
                     'posted_at' => now(),
                 ]);
 
                 LedgerLine::query()->create([
                     'ledger_entry_id' => $entry->id,
-                    'ledger_account_id' => $debitAccount->id,
-                    'business_id' => $businessId,
+                    'ledger_account_id' => $data->debitAccount->id,
+                    'business_id' => $data->businessId,
                     'side' => LedgerSide::Debit,
-                    'amount_minor' => $amountMinor,
+                    'amount_minor' => $data->amountMinor,
                 ]);
 
                 LedgerLine::query()->create([
                     'ledger_entry_id' => $entry->id,
-                    'ledger_account_id' => $creditAccount->id,
-                    'business_id' => $businessId,
+                    'ledger_account_id' => $data->creditAccount->id,
+                    'business_id' => $data->businessId,
                     'side' => LedgerSide::Credit,
-                    'amount_minor' => $amountMinor,
+                    'amount_minor' => $data->amountMinor,
                 ]);
 
                 $entry->load('lines');
 
                 if (! $entry->isBalanced()) {
-                    throw new RuntimeException('Ledger entry is not balanced.');
+                    throw LedgerBalanceException::entryNotBalanced();
                 }
 
                 return $entry;
             });
         } catch (QueryException $e) {
             $existing = LedgerEntry::query()
-                ->where('business_id', $businessId)
-                ->where('idempotency_key', $idempotencyKey)
+                ->where('business_id', $data->businessId)
+                ->where('idempotency_key', $data->idempotencyKey)
                 ->with('lines')
                 ->first();
 

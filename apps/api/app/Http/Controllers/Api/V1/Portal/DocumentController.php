@@ -34,7 +34,8 @@ class DocumentController extends Controller
 
         $validated = $request->validate([
             'purpose' => ['required', 'string', 'max:64'],
-            'file' => ['required', 'file'],
+            // 5 MiB — keep aligned with config('aact.documents.max_bytes') default.
+            'file' => ['required', 'file', 'max:5120'],
         ]);
 
         $document = $this->uploads->store(

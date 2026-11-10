@@ -17,7 +17,7 @@ Demonstrates a modular monolith with real financial invariants: Sanctum MFA, bus
 | Layer | Version |
 | --- | --- |
 | Laravel | 13.40 (skeleton 13.11) |
-| PHP (containers) | 8.4.14 |
+| PHP (containers) | 8.4.27 |
 | Sanctum | 4.3 |
 | Next.js | 16.4 |
 | React | 19.3 |

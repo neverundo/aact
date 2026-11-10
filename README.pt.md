@@ -17,7 +17,7 @@ Demonstra um modular monolith com invariantes financeiros reais: Sanctum MFA, is
 | Camada | Versão |
 | --- | --- |
 | Laravel | 13.40 (skeleton 13.11) |
-| PHP (contentores) | 8.4.14 |
+| PHP (contentores) | 8.4.27 |
 | Sanctum | 4.3 |
 | Next.js | 16.4 |
 | React | 19.3 |

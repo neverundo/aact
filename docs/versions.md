@@ -11,7 +11,7 @@ Recorded at implementation time (2026-11-09).
 | phpstan/phpstan | 2.3.5 |
 | laravel/pint | 1.32.1 |
 | phpunit/phpunit | 12.5.43 |
-| PHP (containers) | 8.4.14-fpm-bookworm |
+| PHP (containers) | 8.4.27-fpm-bookworm |
 | Composer (image) | 2.8.8 |
 | Next.js | 16.4.5 |
 | React | 19.3.0 |

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM php:8.4.14-fpm-bookworm AS base
+FROM php:8.4.27-fpm-bookworm AS base
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

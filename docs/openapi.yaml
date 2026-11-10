@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: AACT CommissionHub API
+  title: AACT AACommissionTool API
   version: 0.5.0
   description: |
     Curated OpenAPI for the portfolio surface. Same-origin Sanctum SPA auth for portals;

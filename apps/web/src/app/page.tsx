@@ -8,11 +8,11 @@ export default function HomePage() {
           AACT
         </p>
         <h1 className="text-4xl font-semibold tracking-tight text-stone-900">
-          CommissionHub
+          AACommissionTool
         </h1>
         <p className="max-w-xl text-lg text-stone-600">
-          Plataforma self-hosted de atribuição e liquidação de comissões. Nome
-          provisório — fase 0: fundação executável.
+          Plataforma self-hosted de atribuição e liquidação de comissões
+          (AACommissionTool).
         </p>
       </div>
 

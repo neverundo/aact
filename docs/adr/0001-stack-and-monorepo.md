@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-AACT / CommissionHub needs an executable modular monolith: Laravel API, Next.js portals, MariaDB, Redis, and Docker Compose. The repository started empty aside from a placeholder README.
+AACT / AACommissionTool needs an executable modular monolith: Laravel API, Next.js portals, MariaDB, Redis, and Docker Compose. The repository started empty aside from a placeholder README.
 
 ## Decision
 

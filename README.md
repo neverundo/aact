@@ -1,6 +1,8 @@
-# AACT — CommissionHub (provisional name)
+**Language:** **English** | [Português (pt_PT)](README.pt.md)
 
-Self-hosted, API-first commission attribution and settlement platform.
+# AACT — Agnostically-Assigning-a-Comission Tool
+
+Self-hosted, API-first commission attribution, management and settlement platform.
 
 The platform records commercial events from any source system, calculates commissions with versioned rules, keeps an auditable internal ledger, and supports manual external payout confirmation. It does **not** move money or integrate with a specific PSP/storefront.
 

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AACT — CommissionHub",
+  title: "AACT — Agnostically-Assigning-a-Comission Tool",
   description:
-    "Plataforma self-hosted de atribuição e liquidação de comissões (nome provisório).",
+    "Plataforma self-hosted de atribuição e liquidação de comissões (AACommissionTool).",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

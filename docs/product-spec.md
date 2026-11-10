@@ -1,10 +1,10 @@
-# Projeto: CommissionHub — Agnostic Commission Attribution & Settlement Platform
+# Projeto: AACommissionTool — Agnostic Commission Attribution & Settlement Platform
 
 Atua como Principal Software Engineer com experiência em Laravel, Next.js, APIs REST, segurança aplicacional e integridade de sistemas financeiros.
 
 Implementa um mini-produto de portefólio funcional, executável e documentado. Não quero apenas scaffolding, diagramas ou CRUDs sem regras de negócio.
 
-O nome CommissionHub é provisório. Working title in this repository: **AACT**.
+O nome AACommissionTool é provisório. Working title in this repository: **AACT**.
 
 ---
 

@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: shivammathur/setup-php@c541c62c27f8350797409a38ee1844b8ae40118a # v2.32.0
+        with:
+          php-version: "8.4"
+          extensions: mbstring, pdo_sqlite, pdo_mysql, redis, intl, bcmath, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Pint
+        run: vendor/bin/pint --test
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G
+
+      - name: Tests
+        run: php artisan test
+
+      - name: Composer audit
+        run: composer audit
+
+  api-coverage:
+    name: API coverage artifact
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: shivammathur/setup-php@c541c62c27f8350797409a38ee1844b8ae40118a # v2.32.0
+        with:
+          php-version: "8.4"
+          extensions: mbstring, pdo_sqlite, intl, bcmath, zip
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Tests with coverage
+        run: php artisan test --coverage-clover=coverage/clover.xml
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: api-coverage-clover
+          path: apps/api/coverage/clover.xml
+          if-no-files-found: warn
+
+  api-financial:
+    name: API financial (MariaDB)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      mariadb:
+        image: mariadb:11.4.5
+        env:
+          MYSQL_DATABASE: aact_test
+          MYSQL_USER: aact
+          MYSQL_PASSWORD: aact_secret
+          MYSQL_ROOT_PASSWORD: root_secret
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: shivammathur/setup-php@c541c62c27f8350797409a38ee1844b8ae40118a # v2.32.0
+        with:
+          php-version: "8.4"
+          extensions: mbstring, pdo_mysql, intl, bcmath, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Financial tests
+        env:
+          AACT_TEST_DB_HOST: 127.0.0.1
+          AACT_TEST_DB_DATABASE: aact_test
+          AACT_TEST_DB_USERNAME: aact
+          AACT_TEST_DB_PASSWORD: aact_secret
+        run: ./vendor/bin/phpunit -c phpunit.mariadb.xml
+
+  web:
+    name: Web
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22.16.0"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: npm audit (high+)
+        run: npm audit --audit-level=high
+
+  compose:
+    name: Compose config
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate Compose file
+        run: docker compose -f compose.yaml config --quiet

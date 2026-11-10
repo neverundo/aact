@@ -1,0 +1,238 @@
+name: aact
+
+x-api-env: &api-env
+  APP_NAME: AACT
+  APP_ENV: local
+  APP_DEBUG: "true"
+  APP_URL: http://localhost:${HTTP_PORT:-18080}
+  APP_KEY: ${APP_KEY}
+  LOG_CHANNEL: stderr
+  DB_CONNECTION: mysql
+  DB_HOST: mariadb
+  DB_PORT: 3306
+  DB_DATABASE: ${DB_DATABASE:-aact}
+  DB_USERNAME: ${DB_USERNAME:-aact}
+  DB_PASSWORD: ${DB_PASSWORD:-aact_secret}
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  SESSION_DRIVER: redis
+  SESSION_DOMAIN: localhost
+  SESSION_SECURE_COOKIE: "false"
+  SANCTUM_STATEFUL_DOMAINS: localhost,localhost:${HTTP_PORT:-18080},127.0.0.1,127.0.0.1:${HTTP_PORT:-18080}
+  MAIL_MAILER: smtp
+  MAIL_HOST: mailpit
+  MAIL_PORT: 1025
+  MAIL_FROM_ADDRESS: noreply@aact.local
+  MAIL_FROM_NAME: AACT
+  FILESYSTEM_DISK: local
+  HASH_DRIVER: argon2id
+  AACT_ADMIN_TOTP_REQUIRED: ${AACT_ADMIN_TOTP_REQUIRED:-false}
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-*}
+
+
+services:
+  nginx:
+    build:
+      context: ./infra/nginx
+      dockerfile: Dockerfile
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_started
+      web:
+        condition: service_started
+    networks:
+      - aact
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api/Dockerfile
+      target: app-dev
+    environment:
+      <<: *api-env
+    volumes:
+      - ./apps/api:/var/www/html
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aact
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(0);'"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  queue:
+    build:
+      context: .
+      dockerfile: infra/docker/api/Dockerfile
+      target: app-dev
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--max-time=3600"]
+    environment:
+      <<: *api-env
+    volumes:
+      - ./apps/api:/var/www/html
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - aact
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: infra/docker/api/Dockerfile
+      target: app-dev
+    command: ["sh", "-c", "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"]
+    environment:
+      <<: *api-env
+    volumes:
+      - ./apps/api:/var/www/html
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - aact
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web/Dockerfile
+      target: web-dev
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    networks:
+      - aact
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  mariadb:
+    image: mariadb:11.4.5
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-aact}
+      MYSQL_USER: ${DB_USERNAME:-aact}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-aact_secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - aact
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    image: redis:7.4.2-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - aact
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.24.1
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    networks:
+      - aact
+
+  clamav:
+    image: clamav/clamav:1.4.2
+    volumes:
+      - clamav_data:/var/lib/clamav
+    networks:
+      - aact
+    profiles: ["antivirus"]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  sonarqube:
+    image: sonarqube:25.5.0.107428-community
+    depends_on:
+      sonar-db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonar-db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD:-sonar}
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    ports:
+      - "${SONAR_PORT:-9000}:9000"
+    networks:
+      - aact
+    profiles: ["sonar"]
+
+  sonar-db:
+    image: postgres:16.8-alpine
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD:-sonar}
+      POSTGRES_DB: sonar
+    volumes:
+      - sonar_db_data:/var/lib/postgresql/data
+    networks:
+      - aact
+    profiles: ["sonar"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar -d sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+networks:
+  aact:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  redis_data:
+  clamav_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
+  sonar_db_data:

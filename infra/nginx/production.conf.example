@@ -1,0 +1,92 @@
+# Example production Nginx front for AACT (TLS + HSTS).
+# Not mounted by default Compose. Copy/adapt behind your certificates.
+#
+# Expected upstreams: api:9000 (php-fpm), web:3000 (Next.js standalone runner).
+
+server_tokens off;
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=20r/s;
+
+upstream api_upstream {
+    server api:9000;
+}
+
+upstream web_upstream {
+    server web:3000;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name example.com;
+
+    ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    client_max_body_size 10m;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'" always;
+
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    location ^~ /storage/ {
+        deny all;
+    }
+
+    location ^~ /up {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param SCRIPT_NAME /index.php;
+        fastcgi_param REQUEST_URI $request_uri;
+        fastcgi_param HTTPS on;
+        fastcgi_pass api_upstream;
+    }
+
+    location ^~ /sanctum/ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param SCRIPT_NAME /index.php;
+        fastcgi_param DOCUMENT_ROOT /var/www/html/public;
+        fastcgi_param REQUEST_URI $request_uri;
+        fastcgi_param HTTPS on;
+        fastcgi_pass api_upstream;
+    }
+
+    location ^~ /api/ {
+        limit_req zone=api_limit burst=40 nodelay;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param SCRIPT_NAME /index.php;
+        fastcgi_param DOCUMENT_ROOT /var/www/html/public;
+        fastcgi_param REQUEST_URI $request_uri;
+        fastcgi_param HTTPS on;
+        fastcgi_pass api_upstream;
+    }
+
+    location / {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_pass http://web_upstream;
+    }
+}

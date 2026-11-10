@@ -1,4 +1,4 @@
-**Language:** **English** | [Português (pt_PT)](README.pt.md)
+**Language:** **English** | [Português](README.pt.md)
 
 # AACT — Agnostically-Assigning-a-Comission Tool
 

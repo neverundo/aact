@@ -29,3 +29,19 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+a,
+button,
+[role="button"],
+[type="button"],
+[type="submit"],
+[type="reset"],
+summary {
+  cursor: pointer;
+}
+
+a:disabled,
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}

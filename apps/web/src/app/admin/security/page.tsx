@@ -1,10 +1,11 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
-import { fetchMe, logout, type AuthUser } from "@/lib/auth";
+import { fetchMe, type AuthUser } from "@/lib/auth";
 
 type TotpBegin = {
   secret: string;
@@ -61,37 +62,40 @@ export default function AdminSecurityPage() {
   }
 
   if (!user) {
-    return (
-      <main className="mx-auto max-w-3xl px-6 py-16 text-stone-600">
-        A carregar…
-      </main>
-    );
+    return <p className="text-stone-600">A carregar…</p>;
   }
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-8 px-6 py-16">
-      <div className="space-y-2">
-        <p className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase">
-          /admin/security
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-stone-900">
-          Segurança da conta
-        </h1>
-        <p className="text-stone-600">
-          {user.session.mfa_setup_only
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title="Segurança da conta"
+        description={
+          user.session.mfa_setup_only
             ? "Acesso administrativo bloqueado até configurar TOTP."
-            : "Gerir MFA, sessões e reautenticação."}
-        </p>
-      </div>
+            : "Gerir MFA, sessões e reautenticação."
+        }
+      />
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Estado</h2>
-        <ul className="space-y-1 text-sm text-stone-700">
+        <ul className="space-y-2 text-sm text-stone-700">
           <li>Email: {user.email}</li>
-          <li>TOTP: {user.mfa.totp_enabled ? "ativo" : "inativo"}</li>
-          <li>
-            Email OTP: {user.mfa.email_otp_enabled ? "ativo" : "inativo"}{" "}
-            (garantia inferior ao TOTP)
+          <li className="flex flex-wrap items-center gap-2">
+            TOTP:{" "}
+            <StatusBadge tone={user.mfa.totp_enabled ? "success" : "warning"}>
+              {user.mfa.totp_enabled ? "ativo" : "inativo"}
+            </StatusBadge>
+          </li>
+          <li className="flex flex-wrap items-center gap-2">
+            Email OTP:{" "}
+            <StatusBadge
+              tone={user.mfa.email_otp_enabled ? "success" : "neutral"}
+            >
+              {user.mfa.email_otp_enabled ? "ativo" : "inativo"}
+            </StatusBadge>
+            <span className="text-stone-500">
+              (garantia inferior ao TOTP)
+            </span>
           </li>
           <li>
             Códigos de recuperação restantes:{" "}
@@ -105,7 +109,7 @@ export default function AdminSecurityPage() {
           <button
             type="button"
             onClick={beginTotp}
-            className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
+            className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
           >
             Configurar autenticador (TOTP)
           </button>
@@ -119,7 +123,10 @@ export default function AdminSecurityPage() {
               <p className="break-all text-xs text-stone-500">
                 Segredo (apenas durante o setup): {setup.secret}
               </p>
-              <form className="flex flex-wrap items-end gap-3" onSubmit={confirmTotp}>
+              <form
+                className="flex flex-wrap items-end gap-3"
+                onSubmit={confirmTotp}
+              >
                 <div className="space-y-1">
                   <label className="block text-sm font-medium" htmlFor="totp">
                     Código de confirmação
@@ -134,7 +141,7 @@ export default function AdminSecurityPage() {
                 </div>
                 <button
                   type="submit"
-                  className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
+                  className="min-h-11 rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
                 >
                   Confirmar e ativar
                 </button>
@@ -163,25 +170,6 @@ export default function AdminSecurityPage() {
           {error}
         </p>
       ) : null}
-
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/admin"
-          className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
-        >
-          Voltar ao admin
-        </Link>
-        <button
-          type="button"
-          className="rounded-md px-4 py-2 text-sm font-medium text-stone-700 underline-offset-2 hover:underline"
-          onClick={async () => {
-            await logout();
-            router.replace("/login");
-          }}
-        >
-          Terminar sessão
-        </button>
-      </div>
-    </main>
+    </div>
   );
 }

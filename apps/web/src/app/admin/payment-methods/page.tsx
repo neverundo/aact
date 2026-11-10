@@ -1,8 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { PromptForm } from "@/components/shell/PromptForm";
+import { useShell } from "@/components/shell/ShellProvider";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatusBadge, toneForStatus } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import { fetchMe } from "@/lib/auth";
 
@@ -17,9 +21,11 @@ type PaymentMethod = {
 
 export default function AdminPaymentMethodsPage() {
   const router = useRouter();
+  const { openDrawer, closeDrawer } = useShell();
   const [items, setItems] = useState<PaymentMethod[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Record<number, unknown>>({});
+  const [loading, setLoading] = useState(true);
 
   async function load() {
     const response = await apiFetch<{ data: PaymentMethod[] }>(
@@ -44,6 +50,8 @@ export default function AdminPaymentMethodsPage() {
           return;
         }
         setError(err instanceof Error ? err.message : "Sem acesso.");
+      } finally {
+        setLoading(false);
       }
     })();
   }, [router]);
@@ -61,41 +69,42 @@ export default function AdminPaymentMethodsPage() {
     }
   }
 
-  async function reveal(id: number) {
-    setError(null);
-    try {
-      await apiFetch("/api/v1/auth/step-up", {
-        method: "POST",
-        body: JSON.stringify({ method: "password", password: window.prompt("Password para step-up:") }),
-      });
-      const response = await apiFetch<{ payload: unknown }>(
-        `/api/v1/admin/payment-methods/${id}/reveal`,
-        { method: "POST" },
-      );
-      setRevealed((prev) => ({ ...prev, [id]: response.payload }));
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Reveal exige step-up recente.",
-      );
-    }
+  function openRevealDrawer(id: number) {
+    openDrawer({
+      id: `reveal-pm-${id}`,
+      title: "Step-up para revelar",
+      description:
+        "O payload completo exige reautenticação recente e fica auditado.",
+      content: (
+        <PromptForm
+          label="Palavra-passe"
+          submitLabel="Revelar"
+          inputType="password"
+          onCancel={closeDrawer}
+          onSubmit={async (password) => {
+            await apiFetch("/api/v1/auth/step-up", {
+              method: "POST",
+              body: JSON.stringify({ method: "password", password }),
+            });
+            const response = await apiFetch<{ payload: unknown }>(
+              `/api/v1/admin/payment-methods/${id}/reveal`,
+              { method: "POST" },
+            );
+            setRevealed((prev) => ({ ...prev, [id]: response.payload }));
+            setError(null);
+            closeDrawer();
+          }}
+        />
+      ),
+    });
   }
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-6 px-6 py-16">
-      <div className="space-y-2">
-        <p className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase">
-          /admin/payment-methods
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Métodos de pagamento
-        </h1>
-        <p className="text-stone-600">
-          A UI mostra máscaras. O payload completo só após step-up e fica
-          auditado.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Métodos de pagamento"
+        description="A UI mostra máscaras. O payload completo só após step-up e fica auditado."
+      />
 
       {error ? (
         <p className="text-sm text-red-700" role="alert">
@@ -103,59 +112,64 @@ export default function AdminPaymentMethodsPage() {
         </p>
       ) : null}
 
-      <ul className="divide-y divide-stone-200 border-y border-stone-200">
-        {items.map((item) => (
-          <li key={item.id} className="space-y-2 py-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-medium">
-                  #{item.id} · {item.method_type} · v{item.version}
-                </p>
-                <p className="font-mono text-sm text-stone-600">
-                  {item.display_mask}
-                </p>
-                {revealed[item.id] ? (
-                  <pre className="mt-2 overflow-x-auto rounded bg-stone-100 p-2 text-xs">
-                    {JSON.stringify(revealed[item.id], null, 2)}
-                  </pre>
-                ) : null}
+      {loading ? (
+        <p className="text-sm text-stone-500">A carregar…</p>
+      ) : items.length === 0 && !error ? (
+        <EmptyState
+          title="Sem métodos pendentes"
+          description="Métodos submetidos pelo portal para revisão aparecem aqui."
+        />
+      ) : (
+        <ul className="divide-y divide-stone-200 border-y border-stone-200">
+          {items.map((item) => (
+            <li key={item.id} className="space-y-2 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-stone-900">
+                      #{item.id} · {item.method_type} · v{item.version}
+                    </p>
+                    <StatusBadge tone={toneForStatus(item.status)}>
+                      {item.status}
+                    </StatusBadge>
+                  </div>
+                  <p className="font-mono text-sm text-stone-600">
+                    {item.display_mask}
+                  </p>
+                  {revealed[item.id] ? (
+                    <pre className="mt-2 overflow-x-auto rounded bg-stone-100 p-2 text-xs">
+                      {JSON.stringify(revealed[item.id], null, 2)}
+                    </pre>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-700"
+                    onClick={() => review(item.id, "approved")}
+                  >
+                    Aprovar
+                  </button>
+                  <button
+                    type="button"
+                    className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                    onClick={() => review(item.id, "rejected")}
+                  >
+                    Rejeitar
+                  </button>
+                  <button
+                    type="button"
+                    className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                    onClick={() => openRevealDrawer(item.id)}
+                  >
+                    Reveal
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="rounded-md bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-700"
-                  onClick={() => review(item.id, "approved")}
-                >
-                  Aprovar
-                </button>
-                <button
-                  type="button"
-                  className="rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                  onClick={() => review(item.id, "rejected")}
-                >
-                  Rejeitar
-                </button>
-                <button
-                  type="button"
-                  className="rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                  onClick={() => reveal(item.id)}
-                >
-                  Reveal
-                </button>
-              </div>
-            </div>
-          </li>
-        ))}
-        {items.length === 0 ? (
-          <li className="py-6 text-sm text-stone-500">
-            Sem métodos pendentes.
-          </li>
-        ) : null}
-      </ul>
-
-      <Link href="/admin" className="text-sm underline-offset-2 hover:underline">
-        Voltar
-      </Link>
-    </main>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

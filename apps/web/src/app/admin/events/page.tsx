@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatusBadge, toneForStatus } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import { fetchMe } from "@/lib/auth";
 
@@ -23,6 +25,7 @@ export default function AdminEventsPage() {
   const router = useRouter();
   const [events, setEvents] = useState<EventRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void (async () => {
@@ -40,23 +43,18 @@ export default function AdminEventsPage() {
         const status = (err as { status?: number }).status;
         if (status === 401) router.replace("/login");
         else setError(err instanceof Error ? err.message : "Sem acesso.");
+      } finally {
+        setLoading(false);
       }
     })();
   }, [router]);
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-6 px-6 py-16">
-      <div className="space-y-2">
-        <p className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase">
-          /admin/events
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Eventos comerciais
-        </h1>
-        <p className="text-stone-600">
-          Ingestão idempotente por (business, source, external_event_id).
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Eventos comerciais"
+        description="Ingestão idempotente por (business, source, external_event_id)."
+      />
 
       {error ? (
         <p className="text-sm text-red-700" role="alert">
@@ -64,33 +62,39 @@ export default function AdminEventsPage() {
         </p>
       ) : null}
 
-      <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
-        {events.map((event) => (
-          <li key={event.id} className="space-y-1 py-3">
-            <p className="font-medium">
-              {event.external_event_id} · {event.source}
-            </p>
-            <p className="text-stone-500">
-              {event.event_type} · {event.amount_minor} {event.currency} ·{" "}
-              {event.status}
-              {event.referral_code ? ` · ref ${event.referral_code}` : ""}
-              {event.commission
-                ? ` · comissão ${event.commission.commission_minor}`
-                : ""}
-            </p>
-            {event.status_reason ? (
-              <p className="text-xs text-stone-500">{event.status_reason}</p>
-            ) : null}
-          </li>
-        ))}
-        {events.length === 0 ? (
-          <li className="py-6 text-stone-500">Sem eventos.</li>
-        ) : null}
-      </ul>
-
-      <Link href="/admin" className="text-sm underline-offset-2 hover:underline">
-        Voltar
-      </Link>
-    </main>
+      {loading ? (
+        <p className="text-sm text-stone-500">A carregar…</p>
+      ) : events.length === 0 && !error ? (
+        <EmptyState
+          title="Sem eventos"
+          description="Eventos comerciais ingeridos via integração aparecem aqui."
+        />
+      ) : (
+        <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
+          {events.map((event) => (
+            <li key={event.id} className="space-y-1 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium text-stone-900">
+                  {event.external_event_id} · {event.source}
+                </p>
+                <StatusBadge tone={toneForStatus(event.status)}>
+                  {event.status}
+                </StatusBadge>
+              </div>
+              <p className="text-stone-500">
+                {event.event_type} · {event.amount_minor} {event.currency}
+                {event.referral_code ? ` · ref ${event.referral_code}` : ""}
+                {event.commission
+                  ? ` · comissão ${event.commission.commission_minor}`
+                  : ""}
+              </p>
+              {event.status_reason ? (
+                <p className="text-xs text-stone-500">{event.status_reason}</p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

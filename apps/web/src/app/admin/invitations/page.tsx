@@ -1,8 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { useShell } from "@/components/shell/ShellProvider";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatusBadge, toneForStatus } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import { fetchMe } from "@/lib/auth";
 
@@ -31,16 +34,14 @@ function invitationStatusLabel(
 
 export default function AdminInvitationsPage() {
   const router = useRouter();
+  const { openDrawer, closeDrawer } = useShell();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [websites, setWebsites] = useState<Website[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [businessId, setBusinessId] = useState<number | "">("");
-  const [websiteIds, setWebsiteIds] = useState<number[]>([]);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [lastToken, setLastToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [lastToken, setLastToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   async function load() {
     const [biz, invites, sites] = await Promise.all([
@@ -69,59 +70,50 @@ export default function AdminInvitationsPage() {
           return;
         }
         setError(err instanceof Error ? err.message : "Sem acesso.");
+      } finally {
+        setLoading(false);
       }
     })();
   }, [router]);
 
-  const filteredWebsites = useMemo(
-    () =>
-      businessId === ""
-        ? []
-        : websites.filter((website) => website.business_id === businessId),
-    [businessId, websites],
-  );
-
-  async function onCreate(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setMessage(null);
-    setLastToken(null);
-    try {
-      const response = await apiFetch<{
-        invitation: Invitation;
-        token: string;
-      }>("/api/v1/admin/invitations", {
-        method: "POST",
-        body: JSON.stringify({
-          business_id: businessId,
-          email,
-          name: name || null,
-          website_ids: websiteIds,
-        }),
-      });
-      setLastToken(response.token);
-      setMessage(`Convite criado para ${response.invitation.email}.`);
-      setEmail("");
-      setName("");
-      setWebsiteIds([]);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao criar convite.");
-    }
+  function openCreateDrawer() {
+    openDrawer({
+      id: "create-invitation",
+      title: "Criar convite",
+      description:
+        "O token em texto só é mostrado no momento da criação; o canal principal é o email.",
+      content: (
+        <CreateInvitationForm
+          businesses={businesses}
+          websites={websites}
+          onSuccess={async (email, token) => {
+            setLastToken(token);
+            setMessage(`Convite criado para ${email}.`);
+            setError(null);
+            closeDrawer();
+            await load();
+          }}
+          onError={(msg) => setError(msg)}
+        />
+      ),
+    });
   }
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-8 px-6 py-16">
-      <div className="space-y-2">
-        <p className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase">
-          /admin/invitations
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">Convites</h1>
-        <p className="text-stone-600">
-          O token em texto só é mostrado aqui no momento da criação; o canal
-          principal é o email.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Convites"
+        description="Convide referrers para um business. O token em texto só aparece na criação."
+        actions={
+          <button
+            type="button"
+            className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
+            onClick={openCreateDrawer}
+          >
+            Criar convite
+          </button>
+        }
+      />
 
       {error ? (
         <p className="text-sm text-red-700" role="alert">
@@ -135,94 +127,173 @@ export default function AdminInvitationsPage() {
         </p>
       ) : null}
 
-      <form className="flex flex-col gap-3" onSubmit={onCreate}>
-        <label className="flex flex-col gap-1 text-sm">
-          Business{/* */}
-          <select
-            className="rounded-md border border-stone-300 px-3 py-2"
-            value={businessId}
-            onChange={(e) => {
-              setBusinessId(e.target.value ? Number(e.target.value) : "");
-              setWebsiteIds([]);
-            }}
-            required
-          >
-            <option value="">Selecionar…</option>
-            {businesses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Email do referrer{/* */}
-          <input
-            type="email"
-            className="rounded-md border border-stone-300 px-3 py-2"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Nome (opcional){/* */}
-          <input
-            className="rounded-md border border-stone-300 px-3 py-2"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-        <fieldset className="space-y-2 text-sm">
-          <legend>Websites</legend>
-          {filteredWebsites.map((website) => (
-            <label key={website.id} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={websiteIds.includes(website.id)}
-                onChange={(e) => {
-                  setWebsiteIds((prev) =>
-                    e.target.checked
-                      ? [...prev, website.id]
-                      : prev.filter((id) => id !== website.id),
-                  );
-                }}
-              />
-              {website.name}
-            </label>
-          ))}
-          {businessId !== "" && filteredWebsites.length === 0 ? (
-            <p className="text-stone-500">Sem websites neste business.</p>
-          ) : null}
-        </fieldset>
-        <button
-          type="submit"
-          className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
+      {loading ? (
+        <p className="text-sm text-stone-500">A carregar…</p>
+      ) : invitations.length === 0 && !error ? (
+        <EmptyState
+          title="Sem convites"
+          description="Crie o primeiro convite para onboarding de referrers."
+          action={
+            <button
+              type="button"
+              className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
+              onClick={openCreateDrawer}
+            >
+              Criar convite
+            </button>
+          }
+        />
+      ) : (
+        <ul className="divide-y divide-stone-200 border-y border-stone-200">
+          {invitations.map((invite) => {
+            const status = invitationStatusLabel(invite);
+            return (
+              <li key={invite.uuid} className="space-y-1 py-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium text-stone-900">
+                    {invite.email} · {invite.business.name}
+                  </p>
+                  <StatusBadge tone={toneForStatus(status)}>{status}</StatusBadge>
+                </div>
+                <p className="text-stone-500">
+                  expira {new Date(invite.expires_at).toLocaleString("pt-PT")}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function CreateInvitationForm({
+  businesses,
+  websites,
+  onSuccess,
+  onError,
+}: {
+  businesses: Business[];
+  websites: Website[];
+  onSuccess: (email: string, token: string) => void | Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const [businessId, setBusinessId] = useState<number | "">("");
+  const [websiteIds, setWebsiteIds] = useState<number[]>([]);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const filteredWebsites = useMemo(
+    () =>
+      businessId === ""
+        ? []
+        : websites.filter((website) => website.business_id === businessId),
+    [businessId, websites],
+  );
+
+  async function onCreate(event: FormEvent) {
+    event.preventDefault();
+    setLocalError(null);
+    setLoading(true);
+    try {
+      const response = await apiFetch<{
+        invitation: Invitation;
+        token: string;
+      }>("/api/v1/admin/invitations", {
+        method: "POST",
+        body: JSON.stringify({
+          business_id: businessId,
+          email,
+          name: name || null,
+          website_ids: websiteIds,
+        }),
+      });
+      await onSuccess(response.invitation.email, response.token);
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Falha ao criar convite.";
+      setLocalError(msg);
+      onError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form className="flex flex-col gap-3" onSubmit={onCreate}>
+      <label className="flex flex-col gap-1 text-sm">
+        Business
+        <select
+          className="rounded-md border border-stone-300 px-3 py-2"
+          value={businessId}
+          onChange={(e) => {
+            setBusinessId(e.target.value ? Number(e.target.value) : "");
+            setWebsiteIds([]);
+          }}
+          required
         >
-          Criar convite
-        </button>
-      </form>
-
-      <ul className="divide-y divide-stone-200 border-y border-stone-200">
-        {invitations.map((invite) => (
-          <li key={invite.uuid} className="space-y-1 py-3 text-sm">
-            <p className="font-medium">
-              {invite.email} · {invite.business.name}
-            </p>
-            <p className="text-stone-500">
-              {invitationStatusLabel(invite)} · expira{" "}
-              {new Date(invite.expires_at).toLocaleString("pt-PT")}
-            </p>
-          </li>
+          <option value="">Selecionar…</option>
+          {businesses.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        Email do referrer
+        <input
+          type="email"
+          className="rounded-md border border-stone-300 px-3 py-2"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        Nome (opcional)
+        <input
+          className="rounded-md border border-stone-300 px-3 py-2"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </label>
+      <fieldset className="space-y-2 text-sm">
+        <legend>Websites</legend>
+        {filteredWebsites.map((website) => (
+          <label key={website.id} className="flex min-h-11 items-center gap-2">
+            <input
+              type="checkbox"
+              checked={websiteIds.includes(website.id)}
+              onChange={(e) => {
+                setWebsiteIds((prev) =>
+                  e.target.checked
+                    ? [...prev, website.id]
+                    : prev.filter((id) => id !== website.id),
+                );
+              }}
+            />
+            {website.name}
+          </label>
         ))}
-        {invitations.length === 0 ? (
-          <li className="py-6 text-sm text-stone-500">Sem convites.</li>
+        {businessId !== "" && filteredWebsites.length === 0 ? (
+          <p className="text-stone-500">Sem websites neste business.</p>
         ) : null}
-      </ul>
-
-      <Link href="/admin" className="text-sm underline-offset-2 hover:underline">
-        Voltar
-      </Link>
-    </main>
+      </fieldset>
+      {localError ? (
+        <p className="text-sm text-red-700" role="alert">
+          {localError}
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={loading}
+        className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
+      >
+        {loading ? "A criar…" : "Criar convite"}
+      </button>
+    </form>
   );
 }

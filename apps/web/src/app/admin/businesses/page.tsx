@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatusBadge, toneForStatus } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import { fetchMe } from "@/lib/auth";
 
@@ -18,6 +20,7 @@ export default function AdminBusinessesPage() {
   const router = useRouter();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void (async () => {
@@ -38,22 +41,18 @@ export default function AdminBusinessesPage() {
           return;
         }
         setError(err instanceof Error ? err.message : "Sem acesso.");
+      } finally {
+        setLoading(false);
       }
     })();
   }, [router]);
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-6 px-6 py-16">
-      <div className="space-y-2">
-        <p className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase">
-          /admin/businesses
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">Businesses</h1>
-        <p className="text-stone-600">
-          Listagem isolada por membership. A autorização efetiva está no
-          Laravel.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Businesses"
+        description="Listagem isolada por membership. A autorização efetiva está no Laravel."
+      />
 
       {error ? (
         <p className="text-sm text-red-700" role="alert">
@@ -61,28 +60,35 @@ export default function AdminBusinessesPage() {
         </p>
       ) : null}
 
-      <ul className="divide-y divide-stone-200 border-y border-stone-200">
-        {businesses.map((business) => (
-          <li key={business.id} className="flex items-center justify-between py-3">
-            <div>
-              <p className="font-medium">{business.name}</p>
-              <p className="text-sm text-stone-500">
-                {business.slug} · {business.currency}
-              </p>
-            </div>
-            <span className="text-xs text-stone-500">
-              {business.is_active ? "ativo" : "inativo"}
-            </span>
-          </li>
-        ))}
-        {businesses.length === 0 && !error ? (
-          <li className="py-6 text-sm text-stone-500">Sem businesses.</li>
-        ) : null}
-      </ul>
-
-      <Link href="/admin" className="text-sm underline-offset-2 hover:underline">
-        Voltar
-      </Link>
-    </main>
+      {loading ? (
+        <p className="text-sm text-stone-500">A carregar…</p>
+      ) : businesses.length === 0 && !error ? (
+        <EmptyState
+          title="Sem businesses"
+          description="Quando tiver acesso a um business, aparece aqui."
+        />
+      ) : (
+        <ul className="divide-y divide-stone-200 border-y border-stone-200">
+          {businesses.map((business) => (
+            <li
+              key={business.id}
+              className="flex items-center justify-between gap-4 py-3"
+            >
+              <div>
+                <p className="font-medium text-stone-900">{business.name}</p>
+                <p className="text-sm text-stone-500">
+                  {business.slug} · {business.currency}
+                </p>
+              </div>
+              <StatusBadge
+                tone={toneForStatus(business.is_active ? "ativo" : "inativo")}
+              >
+                {business.is_active ? "ativo" : "inativo"}
+              </StatusBadge>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

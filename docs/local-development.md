@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Docker Engine + Compose v2
+- Docker Engine + Compose v2 (network access on first build to pull [localfakemail](https://github.com/neverundo/localfakemail) `main`)
 - Optional: GNU Make, PHP 8.4+/8.5, Composer 2, Node 22 (for host-side tooling)
 
 This host currently has PHP 8.5 and Node 22 available. Containers pin PHP 8.4 and Node 22.16.
@@ -20,8 +20,10 @@ Open (defaults; overridable via `.env`):
 - App: http://localhost:18080
 - Admin: http://localhost:18080/admin
 - Portal: http://localhost:18080/portal
-- Mailpit: http://localhost:18025
+- localfakemail: http://localhost:18025
 - API health: http://localhost:18080/api/v1/health
+
+Compose builds [localfakemail](https://github.com/neverundo/localfakemail) from public `main`, seeds a local SMTP credential (`lfm_aact_localdev` / `aact_dev_mail_secret`), and injects it into the API containers. Generate additional key/secret pairs in the localfakemail Settings UI if needed.
 
 If `8080`/`8025` are already bound on the host, keep the `18080`/`18025` defaults.
 

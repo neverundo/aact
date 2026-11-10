@@ -23,8 +23,10 @@ x-api-env: &api-env
   SESSION_SECURE_COOKIE: "false"
   SANCTUM_STATEFUL_DOMAINS: localhost,localhost:${HTTP_PORT:-18080},127.0.0.1,127.0.0.1:${HTTP_PORT:-18080}
   MAIL_MAILER: smtp
-  MAIL_HOST: mailpit
+  MAIL_HOST: localfakemail-smtp
   MAIL_PORT: 1025
+  MAIL_USERNAME: ${MAIL_USERNAME:-lfm_aact_localdev}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-aact_dev_mail_secret}
   MAIL_FROM_ADDRESS: noreply@aact.local
   MAIL_FROM_NAME: AACT
   FILESYSTEM_DISK: local
@@ -62,6 +64,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      localfakemail-smtp:
+        condition: service_started
     networks:
       - aact
     healthcheck:
@@ -167,12 +171,99 @@ services:
       timeout: 3s
       retries: 10
 
-  mailpit:
-    image: axllent/mailpit:v1.24.1
-    ports:
-      - "${MAILPIT_UI_PORT:-8025}:8025"
+  # localfakemail — built from public main:
+  # https://github.com/neverundo/localfakemail
+  localfakemail-db:
+    image: postgres:16.8-alpine
+    environment:
+      POSTGRES_USER: ${LOCALFAKEMAIL_DB_USER:-localfakemail}
+      POSTGRES_PASSWORD: ${LOCALFAKEMAIL_DB_PASSWORD:-localfakemail}
+      POSTGRES_DB: ${LOCALFAKEMAIL_DB_NAME:-localfakemail}
+    volumes:
+      - localfakemail_pgdata:/var/lib/postgresql/data
     networks:
       - aact
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${LOCALFAKEMAIL_DB_USER:-localfakemail} -d ${LOCALFAKEMAIL_DB_NAME:-localfakemail}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  localfakemail-smtp:
+    build:
+      context: https://github.com/neverundo/localfakemail.git#main:apps/smtp
+    depends_on:
+      localfakemail-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${LOCALFAKEMAIL_DB_USER:-localfakemail}:${LOCALFAKEMAIL_DB_PASSWORD:-localfakemail}@localfakemail-db:5432/${LOCALFAKEMAIL_DB_NAME:-localfakemail}
+      SMTP_PORT: 1025
+      EMAIL_RETENTION_LIMIT: ${EMAIL_RETENTION_LIMIT:-500}
+    networks:
+      - aact
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('net').connect(1025,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  localfakemail-web:
+    build:
+      context: https://github.com/neverundo/localfakemail.git#main:apps/web
+    depends_on:
+      localfakemail-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${LOCALFAKEMAIL_DB_USER:-localfakemail}:${LOCALFAKEMAIL_DB_PASSWORD:-localfakemail}@localfakemail-db:5432/${LOCALFAKEMAIL_DB_NAME:-localfakemail}
+      EMAIL_RETENTION_LIMIT: ${EMAIL_RETENTION_LIMIT:-500}
+      SMTP_HOST: 127.0.0.1
+      SMTP_PORT: 1025
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "127.0.0.1:${LOCALFAKEMAIL_UI_PORT:-18025}:3000"
+    networks:
+      - aact
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  localfakemail-seed:
+    image: postgres:16.8-alpine
+    depends_on:
+      localfakemail-web:
+        condition: service_healthy
+    environment:
+      PGHOST: localfakemail-db
+      PGUSER: ${LOCALFAKEMAIL_DB_USER:-localfakemail}
+      PGPASSWORD: ${LOCALFAKEMAIL_DB_PASSWORD:-localfakemail}
+      PGDATABASE: ${LOCALFAKEMAIL_DB_NAME:-localfakemail}
+    volumes:
+      - ./infra/localfakemail/seed-dev-credential.sql:/seed.sql:ro
+    entrypoint: ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/seed.sql"]
+    networks:
+      - aact
+    restart: "no"
 
   clamav:
     image: clamav/clamav:1.4.2
@@ -236,3 +327,4 @@ volumes:
   sonarqube_extensions:
   sonarqube_logs:
   sonar_db_data:
+  localfakemail_pgdata:

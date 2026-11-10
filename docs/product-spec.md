@@ -121,7 +121,7 @@ Docker Compose com serviços separados:
 - scheduler;
 - mariadb;
 - redis;
-- mailpit, apenas em desenvolvimento;
+- localfakemail (https://github.com/neverundo/localfakemail), apenas em desenvolvimento;
 - serviço de análise antivírus para documentos;
 - sonarqube, num profile opcional;
 - PostgreSQL dedicado ao SonarQube, numa versão suportada pelo mesmo.
@@ -391,7 +391,7 @@ Detalhe normativo adicional vive também nos ADRs e documentos por tema sob `doc
 
 ### Fase 0 — Fundação executável
 
-Entregar: estrutura, ADRs, Docker Compose, Laravel, Next.js, Nginx, MariaDB, Redis, Mailpit, healthchecks, testes, CI inicial, README.
+Entregar: estrutura, ADRs, Docker Compose, Laravel, Next.js, Nginx, MariaDB, Redis, localfakemail, healthchecks, testes, CI inicial, README.
 
 Critério: instalação limpa levanta a aplicação e executa testes básicos.
 

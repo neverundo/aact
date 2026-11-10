@@ -8,7 +8,7 @@ setup:
 	@test -f .env || cp .env.example .env
 	@test -f apps/api/.env || cp apps/api/.env.example apps/api/.env
 	$(COMPOSE) build
-	$(COMPOSE) up -d mariadb redis mailpit
+	$(COMPOSE) up -d mariadb redis localfakemail-db localfakemail-smtp localfakemail-web
 	@echo "Waiting for MariaDB..."
 	@sleep 8
 	$(COMPOSE) run --rm --no-deps api composer install --no-interaction

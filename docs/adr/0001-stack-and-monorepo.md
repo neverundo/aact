@@ -23,6 +23,7 @@ AACT / AACommissionTool needs an executable modular monolith: Laravel API, Next.
 | Static analysis | Larastan **3.14** / PHPStan **2.3**, Pint **1.32** | Spec requirement |
 | Compose | Root `compose.yaml` with pinned image tags (no `latest`) | Reproducible local + CI builds |
 | SonarQube DB | PostgreSQL **16** (optional profile) | Spec forbids MariaDB for SonarQube |
+| Dev email | [localfakemail](https://github.com/neverundo/localfakemail) `main` (Compose git build) | Self-hosted SMTP capture with auth + UI; replaces Mailpit; no sibling clone required |
 
 ## Consequences
 

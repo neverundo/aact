@@ -27,7 +27,7 @@ Demonstrates a modular monolith with real financial invariants: Sanctum MFA, bus
 | Redis | 7.4.2 |
 | Nginx | 1.27.5 |
 | Node (containers) | 22.16.0 |
-| Mailpit | v1.24.1 |
+| localfakemail | [neverundo/localfakemail](https://github.com/neverundo/localfakemail) `main` (Compose git build) |
 | ClamAV (optional profile) | 1.4.2 |
 | SonarQube (optional profile) | 25.5.0 + PostgreSQL 16.8 |
 | Playwright (E2E) | 1.56 |
@@ -55,7 +55,7 @@ make seed-demo
 ```
 
 - App: [http://localhost:18080](http://localhost:18080)
-- Mailpit: [http://localhost:18025](http://localhost:18025)
+- localfakemail: [http://localhost:18025](http://localhost:18025)
 
 Health: `GET /api/v1/health` · `GET /up` · `GET /healthz`
 

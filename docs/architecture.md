@@ -22,7 +22,7 @@ Browser
 | `web` | Next.js App Router |
 | `mariadb` | Primary datastore |
 | `redis` | Cache, sessions, queues |
-| `mailpit` | Dev SMTP + UI |
+| `localfakemail-*` | Dev SMTP capture + UI ([localfakemail](https://github.com/neverundo/localfakemail)) |
 | `clamav` | Optional antivirus profile |
 | `sonarqube` + `sonar-db` | Optional analysis profile (PostgreSQL) |
 

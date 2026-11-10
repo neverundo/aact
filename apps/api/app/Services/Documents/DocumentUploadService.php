@@ -6,6 +6,7 @@ use App\Enums\DocumentScanStatus;
 use App\Models\BusinessMembership;
 use App\Models\PrivateDocument;
 use App\Models\User;
+use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -63,8 +64,7 @@ class DocumentUploadService
             action: 'document.uploaded',
             actor: $user,
             businessId: $membership->business_id,
-            entityType: PrivateDocument::class,
-            entityId: $document->id,
+            entity: new AuditEntity(PrivateDocument::class, $document->id),
             context: [
                 'purpose' => $purpose,
                 'scan_status' => $scan['status']->value,
@@ -89,8 +89,7 @@ class DocumentUploadService
             action: 'document.downloaded',
             actor: $actor,
             businessId: $document->business_id,
-            entityType: PrivateDocument::class,
-            entityId: $document->id,
+            entity: new AuditEntity(PrivateDocument::class, $document->id),
             request: $request,
         );
 

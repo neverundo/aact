@@ -15,26 +15,27 @@ class EnsureAdminAccess
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
+        $denial = null;
 
         if ($user === null || ! $user->isAdminUser()) {
-            return response()->json([
+            $denial = [
                 'message' => 'Administrator access required.',
                 'code' => 'forbidden',
-            ], 403);
-        }
-
-        if (! AuthSession::isFullyAuthenticated()) {
-            return response()->json([
+            ];
+        } elseif (! AuthSession::isFullyAuthenticated()) {
+            $denial = [
                 'message' => 'Complete authenticator setup before accessing administration.',
                 'code' => 'mfa_setup_required',
-            ], 403);
-        }
-
-        if ($user->requiresTotpForAdminAccess() && ! $user->hasConfirmedTotp()) {
-            return response()->json([
+            ];
+        } elseif ($user->requiresTotpForAdminAccess() && ! $user->hasConfirmedTotp()) {
+            $denial = [
                 'message' => 'TOTP is required for administrators.',
                 'code' => 'admin_totp_required',
-            ], 403);
+            ];
+        }
+
+        if ($denial !== null) {
+            return response()->json($denial, 403);
         }
 
         return $next($request);

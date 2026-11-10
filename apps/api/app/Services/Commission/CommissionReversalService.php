@@ -8,6 +8,7 @@ use App\Models\Business;
 use App\Models\CommercialEvent;
 use App\Models\Commission;
 use App\Models\IntegrationCredential;
+use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
 use App\Services\Ledger\LedgerService;
 use Illuminate\Database\QueryException;
@@ -281,8 +282,7 @@ class CommissionReversalService
             action: 'commission.reversed',
             actor: null,
             businessId: $credential->business_id,
-            entityType: Commission::class,
-            entityId: $commission->id,
+            entity: new AuditEntity(Commission::class, $commission->id),
             context: [
                 'event_type' => $context['event_type'],
                 'reversed_minor' => $toReverse,

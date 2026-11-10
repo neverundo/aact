@@ -7,6 +7,7 @@ use App\Enums\PaymentMethodType;
 use App\Models\BusinessMembership;
 use App\Models\PaymentMethodVersion;
 use App\Models\User;
+use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
 use App\Support\AuthSession;
 use App\Support\Iban;
@@ -63,8 +64,7 @@ class PaymentMethodService
             action: 'payment_method.submitted',
             actor: $user,
             businessId: $membership->business_id,
-            entityType: PaymentMethodVersion::class,
-            entityId: $version->id,
+            entity: new AuditEntity(PaymentMethodVersion::class, $version->id),
             context: [
                 'method_type' => $type->value,
                 'display_mask' => $mask,
@@ -106,8 +106,7 @@ class PaymentMethodService
             action: 'payment_method.reviewed',
             actor: $actor,
             businessId: $version->business_id,
-            entityType: PaymentMethodVersion::class,
-            entityId: $version->id,
+            entity: new AuditEntity(PaymentMethodVersion::class, $version->id),
             context: [
                 'status' => $status->value,
             ],
@@ -134,8 +133,7 @@ class PaymentMethodService
             action: 'payment_method.revealed',
             actor: $actor,
             businessId: $version->business_id,
-            entityType: PaymentMethodVersion::class,
-            entityId: $version->id,
+            entity: new AuditEntity(PaymentMethodVersion::class, $version->id),
             context: ['method_type' => $version->method_type->value],
             request: $request,
         );

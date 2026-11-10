@@ -6,6 +6,7 @@ use App\Models\Business;
 use App\Models\IntegrationCredential;
 use App\Models\User;
 use App\Models\Website;
+use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -70,8 +71,7 @@ class IntegrationCredentialService
             action: 'integration_credential.created',
             actor: $actor,
             businessId: $business->id,
-            entityType: IntegrationCredential::class,
-            entityId: $credential->id,
+            entity: new AuditEntity(IntegrationCredential::class, $credential->id),
             context: ['source' => $normalizedSource, 'website_id' => $website->id],
             request: $request,
         );
@@ -91,8 +91,7 @@ class IntegrationCredentialService
             action: 'integration_credential.revoked',
             actor: $actor,
             businessId: $credential->business_id,
-            entityType: IntegrationCredential::class,
-            entityId: $credential->id,
+            entity: new AuditEntity(IntegrationCredential::class, $credential->id),
             request: $request,
         );
     }
@@ -116,8 +115,7 @@ class IntegrationCredentialService
             action: 'integration_credential.rotated',
             actor: $actor,
             businessId: $credential->business_id,
-            entityType: IntegrationCredential::class,
-            entityId: $credential->id,
+            entity: new AuditEntity(IntegrationCredential::class, $credential->id),
             context: ['source' => $credential->source],
             request: $request,
         );

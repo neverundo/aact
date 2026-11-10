@@ -511,7 +511,7 @@ function PaymentAndDocumentsSection({
         </ul>
         <form className="flex flex-col gap-3" onSubmit={onSubmitPayment}>
           <label className="flex flex-col gap-1 text-sm">
-            Tipo
+            Tipo{/* */}
             <select
               className="rounded-md border border-stone-300 px-3 py-2"
               value={methodType}
@@ -525,7 +525,7 @@ function PaymentAndDocumentsSection({
           </label>
           {methodType === "iban" ? (
             <label className="flex flex-col gap-1 text-sm">
-              IBAN
+              IBAN{/* */}
               <input
                 className="rounded-md border border-stone-300 px-3 py-2"
                 value={iban}
@@ -535,7 +535,7 @@ function PaymentAndDocumentsSection({
             </label>
           ) : (
             <label className="flex flex-col gap-1 text-sm">
-              Telemóvel MB WAY
+              Telemóvel MB WAY{/* */}
               <input
                 className="rounded-md border border-stone-300 px-3 py-2"
                 value={phone}
@@ -545,7 +545,7 @@ function PaymentAndDocumentsSection({
             </label>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            Titular
+            Titular{/* */}
             <input
               className="rounded-md border border-stone-300 px-3 py-2"
               value={holderName}
@@ -566,7 +566,7 @@ function PaymentAndDocumentsSection({
         <h2 className="text-lg font-semibold">Documentos</h2>
         <form className="flex flex-col gap-3" onSubmit={onUploadDocument}>
           <label className="flex flex-col gap-1 text-sm">
-            Finalidade
+            Finalidade{/* */}
             <input
               name="purpose"
               className="rounded-md border border-stone-300 px-3 py-2"
@@ -575,7 +575,7 @@ function PaymentAndDocumentsSection({
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Ficheiro (PDF/JPG/PNG)
+            Ficheiro (PDF/JPG/PNG){/* */}
             <input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required />
           </label>
           <button
@@ -637,7 +637,7 @@ function PayoutSection({
           )}
         </fieldset>
         <label className="flex flex-col gap-1 text-sm">
-          Montante (minor units, opcional = saldo total)
+          Montante (minor units, opcional = saldo total){/* */}
           <input
             className="rounded-md border border-stone-300 px-3 py-2"
             inputMode="numeric"

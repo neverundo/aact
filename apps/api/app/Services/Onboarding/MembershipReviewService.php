@@ -6,6 +6,7 @@ use App\Enums\MembershipStatus;
 use App\Enums\PaymentMethodStatus;
 use App\Models\BusinessMembership;
 use App\Models\User;
+use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,8 +54,7 @@ class MembershipReviewService
             action: 'membership.approved',
             actor: $actor,
             businessId: $membership->business_id,
-            entityType: BusinessMembership::class,
-            entityId: $membership->id,
+            entity: new AuditEntity(BusinessMembership::class, $membership->id),
             request: $request,
         );
 
@@ -80,8 +80,7 @@ class MembershipReviewService
             action: 'membership.rejected',
             actor: $actor,
             businessId: $membership->business_id,
-            entityType: BusinessMembership::class,
-            entityId: $membership->id,
+            entity: new AuditEntity(BusinessMembership::class, $membership->id),
             context: ['reason' => $reason],
             request: $request,
         );
@@ -108,8 +107,7 @@ class MembershipReviewService
             action: 'membership.suspended',
             actor: $actor,
             businessId: $membership->business_id,
-            entityType: BusinessMembership::class,
-            entityId: $membership->id,
+            entity: new AuditEntity(BusinessMembership::class, $membership->id),
             context: ['reason' => $reason],
             request: $request,
         );

@@ -26,22 +26,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(FileScanner::class, function () {
             $driver = (string) config('aact.documents.scanner', 'auto');
 
-            if ($driver === 'fake' || $this->app->environment('testing')) {
-                return new FakeFileScanner;
-            }
-
-            if ($driver === 'unavailable') {
-                return new UnavailableFileScanner;
-            }
-
-            if ($driver === 'clamav' || $driver === 'auto') {
-                return new ClamAvFileScanner(
+            return match (true) {
+                $driver === 'fake' || $this->app->environment('testing') => new FakeFileScanner,
+                $driver === 'unavailable' => new UnavailableFileScanner,
+                $driver === 'clamav' || $driver === 'auto' => new ClamAvFileScanner(
                     (string) config('aact.documents.clamav_host'),
                     (int) config('aact.documents.clamav_port'),
-                );
-            }
-
-            return new UnavailableFileScanner;
+                ),
+                default => new UnavailableFileScanner,
+            };
         });
     }
 

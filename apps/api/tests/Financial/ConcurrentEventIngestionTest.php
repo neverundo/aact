@@ -15,6 +15,7 @@ use App\Models\ReferralCode;
 use App\Models\User;
 use App\Models\Website;
 use App\Services\Commission\CommissionRuleService;
+use App\Services\Commission\CreateCommissionRuleData;
 use App\Services\Integration\EventIngestionService;
 use App\Services\Integration\IntegrationCredentialService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -107,17 +108,17 @@ class ConcurrentEventIngestionTest extends FinancialTestCase
             'POS',
         );
 
-        app(CommissionRuleService::class)->create(
-            $admin,
-            $business,
-            'Sale 8%',
-            'sale',
-            800,
-            0,
-            50,
-            Carbon::now()->subDay(),
-            $website,
-        );
+        app(CommissionRuleService::class)->create(new CreateCommissionRuleData(
+            actor: $admin,
+            business: $business,
+            name: 'Sale 8%',
+            eventType: 'sale',
+            rateBps: 800,
+            flatMinor: 0,
+            priority: 50,
+            effectiveFrom: Carbon::now()->subDay(),
+            website: $website,
+        ));
 
         return [$created['credential'], $code];
     }

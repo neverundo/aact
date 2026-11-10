@@ -2,12 +2,9 @@
 
 namespace App\Services\Commission;
 
-use App\Models\Business;
 use App\Models\CommissionRule;
-use App\Models\User;
-use App\Models\Website;
+use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -15,69 +12,57 @@ class CommissionRuleService
 {
     public function __construct(private readonly AuditLogger $audit) {}
 
-    public function create(
-        User $actor,
-        Business $business,
-        string $name,
-        string $eventType,
-        int $rateBps,
-        int $flatMinor,
-        int $priority,
-        Carbon $effectiveFrom,
-        ?Website $website = null,
-        ?Carbon $effectiveTo = null,
-        ?Request $request = null,
-    ): CommissionRule {
-        if ($website !== null && $website->business_id !== $business->id) {
+    public function create(CreateCommissionRuleData $data): CommissionRule
+    {
+        if ($data->website !== null && $data->website->business_id !== $data->business->id) {
             throw ValidationException::withMessages([
                 'website_id' => ['Website does not belong to the business.'],
             ]);
         }
 
-        if ($rateBps < 0 || $rateBps > 10_000) {
+        if ($data->rateBps < 0 || $data->rateBps > 10_000) {
             throw ValidationException::withMessages([
                 'rate_bps' => ['Rate must be between 0 and 10000 basis points.'],
             ]);
         }
 
-        if ($flatMinor < 0) {
+        if ($data->flatMinor < 0) {
             throw ValidationException::withMessages([
                 'flat_minor' => ['Flat amount must be non-negative.'],
             ]);
         }
 
         $nextVersion = (int) CommissionRule::query()
-            ->where('business_id', $business->id)
-            ->where('name', $name)
+            ->where('business_id', $data->business->id)
+            ->where('name', $data->name)
             ->max('version') + 1;
 
         $rule = CommissionRule::query()->create([
-            'business_id' => $business->id,
-            'website_id' => $website?->id,
-            'name' => $name,
-            'event_type' => $eventType,
-            'rate_bps' => $rateBps,
-            'flat_minor' => $flatMinor,
-            'currency' => $business->currency,
-            'priority' => $priority,
+            'business_id' => $data->business->id,
+            'website_id' => $data->website?->id,
+            'name' => $data->name,
+            'event_type' => $data->eventType,
+            'rate_bps' => $data->rateBps,
+            'flat_minor' => $data->flatMinor,
+            'currency' => $data->business->currency,
+            'priority' => $data->priority,
             'version' => max(1, $nextVersion),
-            'effective_from' => $effectiveFrom,
-            'effective_to' => $effectiveTo,
+            'effective_from' => $data->effectiveFrom,
+            'effective_to' => $data->effectiveTo,
             'is_active' => true,
         ]);
 
         $this->audit->log(
             action: 'commission_rule.created',
-            actor: $actor,
-            businessId: $business->id,
-            entityType: CommissionRule::class,
-            entityId: $rule->id,
+            actor: $data->actor,
+            businessId: $data->business->id,
+            entity: new AuditEntity(CommissionRule::class, $rule->id),
             context: [
-                'name' => $name,
-                'rate_bps' => $rateBps,
+                'name' => $data->name,
+                'rate_bps' => $data->rateBps,
                 'version' => $rule->version,
             ],
-            request: $request,
+            request: $data->request,
         );
 
         return $rule;

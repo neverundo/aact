@@ -8,6 +8,7 @@ use App\Models\Business;
 use App\Models\CommissionRule;
 use App\Models\Website;
 use App\Services\Commission\CommissionRuleService;
+use App\Services\Commission\CreateCommissionRuleData;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
@@ -65,19 +66,19 @@ class CommissionRuleController extends Controller
             $website = Website::query()->findOrFail($validated['website_id']);
         }
 
-        $rule = $this->rules->create(
-            $actor,
-            $business,
-            $validated['name'],
-            $validated['event_type'],
-            (int) $validated['rate_bps'],
-            (int) ($validated['flat_minor'] ?? 0),
-            (int) ($validated['priority'] ?? 100),
-            Carbon::parse($validated['effective_from'])->utc(),
-            $website,
-            isset($validated['effective_to']) ? Carbon::parse($validated['effective_to'])->utc() : null,
-            $request,
-        );
+        $rule = $this->rules->create(new CreateCommissionRuleData(
+            actor: $actor,
+            business: $business,
+            name: $validated['name'],
+            eventType: $validated['event_type'],
+            rateBps: (int) $validated['rate_bps'],
+            flatMinor: (int) ($validated['flat_minor'] ?? 0),
+            priority: (int) ($validated['priority'] ?? 100),
+            effectiveFrom: Carbon::parse($validated['effective_from'])->utc(),
+            website: $website,
+            effectiveTo: isset($validated['effective_to']) ? Carbon::parse($validated['effective_to'])->utc() : null,
+            request: $request,
+        ));
 
         return new CommissionRuleResource($rule->load(['business', 'website']));
     }

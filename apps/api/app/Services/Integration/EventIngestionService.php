@@ -12,6 +12,7 @@ use App\Models\Commission;
 use App\Models\CommissionRule;
 use App\Models\IntegrationCredential;
 use App\Models\ReferralCode;
+use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
 use App\Services\Commission\CommissionRuleService;
 use App\Services\Ledger\LedgerService;
@@ -343,8 +344,7 @@ class EventIngestionService
             action: 'commercial_event.attributed',
             actor: null,
             businessId: $credential->business_id,
-            entityType: CommercialEvent::class,
-            entityId: $event->id,
+            entity: new AuditEntity(CommercialEvent::class, $event->id),
             context: [
                 'external_event_id' => $context['external_id'],
                 'commission_minor' => $commissionMinor,

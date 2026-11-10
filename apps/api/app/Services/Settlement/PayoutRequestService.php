@@ -12,6 +12,7 @@ use App\Models\PaymentMethodVersion;
 use App\Models\PayoutRequest;
 use App\Models\PrivateDocument;
 use App\Models\User;
+use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
 use App\Services\Ledger\LedgerService;
 use Illuminate\Http\Request;
@@ -123,8 +124,7 @@ class PayoutRequestService
                 action: 'payout_request.created',
                 actor: $user,
                 businessId: $payout->business_id,
-                entityType: PayoutRequest::class,
-                entityId: $payout->id,
+                entity: new AuditEntity(PayoutRequest::class, $payout->id),
                 context: ['amount_minor' => $requestAmount],
                 request: $request,
             );
@@ -152,8 +152,7 @@ class PayoutRequestService
             action: 'payout_request.approved',
             actor: $actor,
             businessId: $payout->business_id,
-            entityType: PayoutRequest::class,
-            entityId: $payout->id,
+            entity: new AuditEntity(PayoutRequest::class, $payout->id),
             request: $request,
         );
 
@@ -179,8 +178,7 @@ class PayoutRequestService
             action: 'payout_request.rejected',
             actor: $actor,
             businessId: $payout->business_id,
-            entityType: PayoutRequest::class,
-            entityId: $payout->id,
+            entity: new AuditEntity(PayoutRequest::class, $payout->id),
             context: ['reason' => $reason],
             request: $request,
         );
@@ -229,8 +227,7 @@ class PayoutRequestService
                 action: 'payout_request.paid',
                 actor: $actor,
                 businessId: $locked->business_id,
-                entityType: PayoutRequest::class,
-                entityId: $locked->id,
+                entity: new AuditEntity(PayoutRequest::class, $locked->id),
                 context: [
                     'amount_minor' => $locked->amount_minor,
                     'external_reference' => $externalReference,

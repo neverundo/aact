@@ -11,6 +11,7 @@ use App\Models\ReferrerProfile;
 use App\Models\User;
 use App\Models\Website;
 use App\Notifications\ReferrerInvitationNotification;
+use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
 use App\Support\PhoneNumber;
 use Illuminate\Http\Request;
@@ -81,8 +82,7 @@ class InvitationService
             action: 'invitation.created',
             actor: $actor,
             businessId: $business->id,
-            entityType: Invitation::class,
-            entityId: $invitation->id,
+            entity: new AuditEntity(Invitation::class, $invitation->id),
             context: ['email' => $invitation->email],
             request: $request,
         );
@@ -180,8 +180,7 @@ class InvitationService
             action: 'invitation.accepted',
             actor: $user,
             businessId: $membership->business_id,
-            entityType: Invitation::class,
-            entityId: $invitation->id,
+            entity: new AuditEntity(Invitation::class, $invitation->id),
             request: $request,
         );
 
@@ -202,8 +201,7 @@ class InvitationService
             action: 'invitation.revoked',
             actor: $actor,
             businessId: $invitation->business_id,
-            entityType: Invitation::class,
-            entityId: $invitation->id,
+            entity: new AuditEntity(Invitation::class, $invitation->id),
             request: $request,
         );
     }
@@ -249,8 +247,7 @@ class InvitationService
             action: 'invitation.resent',
             actor: $actor,
             businessId: $invitation->business_id,
-            entityType: Invitation::class,
-            entityId: $invitation->id,
+            entity: new AuditEntity(Invitation::class, $invitation->id),
             request: $request,
         );
 

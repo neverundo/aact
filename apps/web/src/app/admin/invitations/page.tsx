@@ -20,6 +20,15 @@ type Invitation = {
   expired: boolean;
 };
 
+function invitationStatusLabel(
+  invite: Pick<Invitation, "accepted" | "revoked" | "expired">,
+): string {
+  if (invite.accepted) return "aceite";
+  if (invite.revoked) return "revogado";
+  if (invite.expired) return "expirado";
+  return "ativo";
+}
+
 export default function AdminInvitationsPage() {
   const router = useRouter();
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -201,14 +210,8 @@ export default function AdminInvitationsPage() {
               {invite.email} · {invite.business.name}
             </p>
             <p className="text-stone-500">
-              {invite.accepted
-                ? "aceite"
-                : invite.revoked
-                  ? "revogado"
-                  : invite.expired
-                    ? "expirado"
-                    : "ativo"}{" "}
-              · expira {new Date(invite.expires_at).toLocaleString("pt-PT")}
+              {invitationStatusLabel(invite)} · expira{" "}
+              {new Date(invite.expires_at).toLocaleString("pt-PT")}
             </p>
           </li>
         ))}

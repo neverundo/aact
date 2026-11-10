@@ -21,6 +21,7 @@ use App\Models\ReferralCode;
 use App\Models\User;
 use App\Models\Website;
 use App\Services\Commission\CommissionRuleService;
+use App\Services\Commission\CreateCommissionRuleData;
 use App\Services\Integration\IntegrationCredentialService;
 use App\Support\AuthSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -271,17 +272,17 @@ class RefundAndPayoutTest extends TestCase
             'Checkout',
         );
 
-        app(CommissionRuleService::class)->create(
-            $admin,
-            $business,
-            'Sale 10%',
-            'sale',
-            1000,
-            0,
-            100,
-            Carbon::now()->subDay(),
-            $website,
-        );
+        app(CommissionRuleService::class)->create(new CreateCommissionRuleData(
+            actor: $admin,
+            business: $business,
+            name: 'Sale 10%',
+            eventType: 'sale',
+            rateBps: 1000,
+            flatMinor: 0,
+            priority: 100,
+            effectiveFrom: Carbon::now()->subDay(),
+            website: $website,
+        ));
 
         return [
             $created['credential'],

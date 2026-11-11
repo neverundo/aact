@@ -77,7 +77,11 @@
     "navLabel": "Application areas",
     "login": "Sign in",
     "admin": "Administration",
-    "portal": "Referrer portal"
+    "portal": "Referrer portal",
+    "documentation": "Documentation"
+  },
+  "docs": {
+    "title": "Documentation"
   },
   "auth": {
     "loginTitle": "Sign in",

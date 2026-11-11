@@ -22,6 +22,17 @@ function getIsLgServerSnapshot() {
   return false;
 }
 
+function brandWords(name: string): string[] {
+  return name.trim().split(/\s+/).filter(Boolean);
+}
+
+function brandInitials(name: string): string {
+  const words = brandWords(name);
+  if (words.length === 0) return "A";
+  if (words.length === 1) return words[0]!.slice(0, 1).toUpperCase();
+  return `${words[0]!.slice(0, 1)}${words[1]!.slice(0, 1)}`.toUpperCase();
+}
+
 export function Sidebar({
   groups,
   homeHref,
@@ -39,7 +50,8 @@ export function Sidebar({
   );
   const railMode = collapsed && isLg;
   const markLabel = brand.brandName ?? "AACT";
-  const shortMark = brand.brandName ? brand.brandName.slice(0, 1).toUpperCase() : "A";
+  const words = brandWords(markLabel);
+  const initials = brandInitials(markLabel);
 
   return (
     <>
@@ -64,13 +76,18 @@ export function Sidebar({
       >
         <div
           className={[
-            "flex h-14 shrink-0 items-center border-b border-stone-200 px-3",
-            railMode ? "justify-center lg:px-2" : "justify-between",
+            "flex shrink-0 items-center border-b border-stone-200",
+            railMode
+              ? "h-14 justify-center gap-0 px-1"
+              : "justify-between gap-1 px-3 py-2.5",
           ].join(" ")}
         >
           <Link
             href={homeHref}
-            className="flex items-center gap-2 pl-3 text-sm font-semibold tracking-[0.18em] text-stone-900 uppercase"
+            className={[
+              "flex min-w-0 items-center text-stone-900",
+              railMode ? "justify-center" : "flex-1 gap-2.5 pl-3",
+            ].join(" ")}
             onClick={() => setMobileOpen(false)}
             aria-label={markLabel}
             style={
@@ -84,20 +101,43 @@ export function Sidebar({
               <img
                 src={brand.logoUrl}
                 alt=""
-                className="h-7 w-7 rounded object-contain"
+                className={[
+                  "shrink-0 rounded object-contain",
+                  railMode ? "h-7 w-7" : "h-9 w-9",
+                ].join(" ")}
               />
+            ) : railMode ? (
+              <span
+                aria-hidden="true"
+                className="flex h-7 w-7 items-center justify-center text-xs font-semibold tracking-wide"
+              >
+                {initials}
+              </span>
             ) : null}
-            <span className={railMode ? "lg:hidden" : undefined}>{markLabel}</span>
-            <span
-              className={railMode ? "hidden lg:inline" : "hidden"}
-              aria-hidden="true"
-            >
-              {shortMark}
-            </span>
+
+            {!railMode ? (
+              <span
+                className={[
+                  "flex min-w-0 flex-col font-semibold tracking-[0.16em] uppercase",
+                  brand.logoUrl
+                    ? "h-9 justify-center gap-0.5 text-xs leading-none"
+                    : "gap-0.5 text-sm leading-none",
+                ].join(" ")}
+              >
+                {words.map((word, index) => (
+                  <span key={`${word}-${index}`} className="truncate">
+                    {word}
+                  </span>
+                ))}
+              </span>
+            ) : null}
           </Link>
           <button
             type="button"
-            className="hidden min-h-11 min-w-11 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 lg:inline-flex"
+            className={[
+              "hidden items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 lg:inline-flex",
+              railMode ? "h-8 w-8 shrink-0" : "min-h-11 min-w-11",
+            ].join(" ")}
             aria-label={
               collapsed ? t("expandSidebar") : t("collapseSidebar")
             }

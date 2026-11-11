@@ -77,7 +77,11 @@
     "navLabel": "Áreas da aplicação",
     "login": "Iniciar sessão",
     "admin": "Administração",
-    "portal": "Portal do referrer"
+    "portal": "Portal do referrer",
+    "documentation": "Documentação"
+  },
+  "docs": {
+    "title": "Documentação"
   },
   "auth": {
     "loginTitle": "Iniciar sessão",
@@ -502,7 +506,7 @@
     },
     "payout": {
       "title": "Pedidos de payout",
-      "description": "O pagamento é externo; aqui só pedimos e registamos settlement.",
+      "description": "O pagamento é externo; aqui só pedimos e registamos o acto de intenção de payout (settlement).",
       "request": "Pedir payout",
       "empty": "Sem pedidos",
       "drawerTitle": "Pedir payout",

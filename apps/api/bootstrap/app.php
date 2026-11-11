@@ -4,10 +4,12 @@ use App\Http\Middleware\AssignCorrelationId;
 use App\Http\Middleware\EnsureAdminAccess;
 use App\Http\Middleware\EnsureFullyAuthenticated;
 use App\Http\Middleware\EnsureStepUp;
+use App\Http\Middleware\SoftAuthenticateSession;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // (see config/aact.php `trusted_proxies` + docs/hardening.md).
         $middleware->trustProxies(at: '*');
         $middleware->statefulApi();
+        $middleware->replace(AuthenticateSession::class, SoftAuthenticateSession::class);
         $middleware->append(AssignCorrelationId::class);
         $middleware->validateCsrfTokens(except: [
             'api/v1/integration/*',

@@ -34,7 +34,20 @@ class MembershipController extends Controller
             $query->where('business_id', $businessId);
         }
 
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
+
         return MembershipResource::collection($query->paginate(25));
+    }
+
+    public function show(Request $request, BusinessMembership $membership): MembershipResource
+    {
+        $this->assertCanView($request, $membership);
+
+        return new MembershipResource(
+            $membership->load(['business', 'websites', 'paymentMethodVersions', 'referralCodes', 'user'])
+        );
     }
 
     public function approve(Request $request, BusinessMembership $membership): MembershipResource
@@ -68,6 +81,18 @@ class MembershipController extends Controller
         return new MembershipResource(
             $this->reviews->suspend($request->user(), $membership, $validated['reason'], $request)
         );
+    }
+
+    private function assertCanView(Request $request, BusinessMembership $membership): void
+    {
+        $actor = $request->user();
+        if ($actor->isPlatformAdmin()) {
+            return;
+        }
+
+        if (! $actor->belongsToBusiness($membership->business_id)) {
+            abort(403);
+        }
     }
 
     private function assertCanManage(Request $request, BusinessMembership $membership): void

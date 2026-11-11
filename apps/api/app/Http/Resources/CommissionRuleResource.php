@@ -31,6 +31,14 @@ class CommissionRuleResource extends JsonResource
             'effective_from' => $this->effective_from->toIso8601String(),
             'effective_to' => $this->effective_to?->toIso8601String(),
             'is_active' => $this->is_active,
+            'business' => $this->whenLoaded('business', fn () => [
+                'id' => $this->business->id,
+                'name' => $this->business->name,
+            ]),
+            'website' => $this->whenLoaded('website', fn () => $this->website ? [
+                'id' => $this->website->id,
+                'name' => $this->website->name,
+            ] : null),
         ];
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\BusinessBrandingController;
 use App\Http\Controllers\Api\V1\Admin\BusinessController;
 use App\Http\Controllers\Api\V1\Admin\CommercialEventController;
 use App\Http\Controllers\Api\V1\Admin\CommissionController as AdminCommissionController;
@@ -20,8 +21,10 @@ use App\Http\Controllers\Api\V1\Auth\RecoveryCodeController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
 use App\Http\Controllers\Api\V1\Auth\StepUpController;
 use App\Http\Controllers\Api\V1\Auth\TotpController;
+use App\Http\Controllers\Api\V1\BrandingAssetController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\Integration\EventIngestionController;
+use App\Http\Controllers\Api\V1\Portal\BrandingController as PortalBrandingController;
 use App\Http\Controllers\Api\V1\Portal\CommissionController as PortalCommissionController;
 use App\Http\Controllers\Api\V1\Portal\DocumentController;
 use App\Http\Controllers\Api\V1\Portal\InvitationAcceptanceController;
@@ -93,10 +96,19 @@ Route::prefix('v1')->group(function (): void {
         ->middleware('throttle:120,1')
         ->name('api.v1.integration.events');
 
+    Route::get('/branding/businesses/{business}/logo', [BrandingAssetController::class, 'businessLogo'])
+        ->middleware('throttle:60,1');
+    Route::get('/branding/websites/{website}/{asset}', [BrandingAssetController::class, 'websiteAsset'])
+        ->where('asset', 'logo|favicon')
+        ->middleware('throttle:60,1');
+    Route::get('/branding/businesses/{business}', [PortalBrandingController::class, 'forBusiness'])
+        ->middleware('throttle:60,1');
+
     Route::middleware('auth:sanctum')->prefix('portal')->group(function (): void {
         Route::post('/invitations/{uuid}/accept', [InvitationAcceptanceController::class, 'accept']);
         Route::get('/profile', [ProfileController::class, 'show']);
         Route::put('/profile', [ProfileController::class, 'update']);
+        Route::get('/branding', [PortalBrandingController::class, 'show']);
         Route::get('/memberships', [PortalMembershipController::class, 'index']);
         Route::get('/memberships/{membership}', [PortalMembershipController::class, 'show']);
         Route::post('/memberships/{membership}/payment-methods', [PaymentMethodController::class, 'store']);
@@ -118,12 +130,18 @@ Route::prefix('v1')->group(function (): void {
             Route::apiResource('businesses', BusinessController::class);
             Route::apiResource('websites', WebsiteController::class);
 
+            Route::get('businesses/{business}/branding', [BusinessBrandingController::class, 'show']);
+            Route::put('businesses/{business}/branding', [BusinessBrandingController::class, 'update']);
+            Route::post('businesses/{business}/branding/logo', [BusinessBrandingController::class, 'uploadLogo']);
+            Route::post('websites/{website}/fetch-brand-assets', [BusinessBrandingController::class, 'fetchWebsiteAssets']);
+
             Route::get('invitations', [AdminInvitationController::class, 'index']);
             Route::post('invitations', [AdminInvitationController::class, 'store']);
             Route::post('invitations/{invitation}/revoke', [AdminInvitationController::class, 'revoke']);
             Route::post('invitations/{invitation}/resend', [AdminInvitationController::class, 'resend']);
 
             Route::get('memberships', [AdminMembershipController::class, 'index']);
+            Route::get('memberships/{membership}', [AdminMembershipController::class, 'show']);
             Route::post('memberships/{membership}/approve', [AdminMembershipController::class, 'approve']);
             Route::post('memberships/{membership}/reject', [AdminMembershipController::class, 'reject']);
             Route::post('memberships/{membership}/suspend', [AdminMembershipController::class, 'suspend']);
@@ -140,6 +158,7 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('commission-rules', [CommissionRuleController::class, 'index']);
             Route::post('commission-rules', [CommissionRuleController::class, 'store']);
+            Route::post('commission-rules/{commissionRule}/deactivate', [CommissionRuleController::class, 'deactivate']);
 
             Route::get('commercial-events', [CommercialEventController::class, 'index']);
             Route::get('commissions', [AdminCommissionController::class, 'index']);

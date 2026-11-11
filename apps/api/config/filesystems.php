@@ -46,6 +46,14 @@ return [
             'report' => false,
         ],
 
+        'branding_assets' => [
+            'driver' => 'local',
+            'root' => storage_path('app/branding'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

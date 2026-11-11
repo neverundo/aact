@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type SyntheticEvent } from "react";
+import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { useShell } from "@/components/shell/ShellProvider";
@@ -8,6 +8,12 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge, toneForStatus } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import { fetchMe, type AuthUser } from "@/lib/auth";
+import {
+  formatIbanInput,
+  isValidIban,
+  liveValidateIban,
+  normalizeIban,
+} from "@/lib/iban";
 
 type Membership = {
   id: number;
@@ -276,6 +282,7 @@ export default function PortalHomePage() {
       <PageHeader
         title="Portal do referrer"
         description={`Sessão de ${user.email}. Complete pagamento e documentos enquanto a membership estiver pendente; códigos só após aprovação.`}
+        helpKey="portal.home"
       />
 
       {error ? (
@@ -558,14 +565,34 @@ function PaymentForm({
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
+  const ibanStatus = liveValidateIban(iban);
+  const ibanBorderClass =
+    methodType !== "iban" || ibanStatus.kind === "empty"
+      ? "border-stone-300"
+      : ibanStatus.kind === "valid"
+        ? "border-emerald-600"
+        : ibanStatus.kind === "invalid"
+          ? "border-red-600"
+          : "border-stone-300";
+
   async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setLocalError(null);
+
+    if (methodType === "iban" && !isValidIban(iban)) {
+      setLocalError(
+        ibanStatus.kind === "invalid" || ibanStatus.kind === "incomplete"
+          ? ibanStatus.message
+          : "Indique um IBAN válido.",
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       await onSubmit({
         method_type: methodType,
-        iban: methodType === "iban" ? iban : undefined,
+        iban: methodType === "iban" ? normalizeIban(iban) : undefined,
         phone: methodType === "mbway" ? phone : undefined,
         holder_name: holderName,
       });
@@ -579,7 +606,7 @@ function PaymentForm({
   }
 
   return (
-    <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
       <label className="flex flex-col gap-1 text-sm">
         Tipo
         <select
@@ -592,15 +619,46 @@ function PaymentForm({
         </select>
       </label>
       {methodType === "iban" ? (
-        <label className="flex flex-col gap-1 text-sm">
-          IBAN
+        <div className="flex flex-col gap-1 text-sm">
+          <label htmlFor="portal-iban" className="font-medium">
+            IBAN
+          </label>
           <input
-            className="rounded-md border border-stone-300 px-3 py-2"
+            id="portal-iban"
+            name="iban"
+            autoComplete="off"
+            spellCheck={false}
+            inputMode="text"
+            className={`rounded-md border bg-white px-3 py-2 font-mono uppercase tracking-wide outline-none focus:border-stone-900 ${ibanBorderClass}`}
             value={iban}
-            onChange={(e) => setIban(e.target.value)}
+            aria-invalid={ibanStatus.kind === "invalid"}
+            aria-describedby="portal-iban-status"
+            onChange={(e) => {
+              setIban(formatIbanInput(e.target.value));
+              setLocalError(null);
+            }}
             required
           />
-        </label>
+          {ibanStatus.kind !== "empty" ? (
+            <p
+              id="portal-iban-status"
+              role={ibanStatus.kind === "invalid" ? "alert" : "status"}
+              className={
+                ibanStatus.kind === "valid"
+                  ? "text-sm text-emerald-800"
+                  : ibanStatus.kind === "invalid"
+                    ? "text-sm text-red-700"
+                    : "text-sm text-stone-500"
+              }
+            >
+              {ibanStatus.message}
+            </p>
+          ) : (
+            <p id="portal-iban-status" className="sr-only">
+              Introduza o IBAN; as letras são convertidas para maiúsculas.
+            </p>
+          )}
+        </div>
       ) : (
         <label className="flex flex-col gap-1 text-sm">
           Telemóvel MB WAY
@@ -628,8 +686,10 @@ function PaymentForm({
       ) : null}
       <button
         type="submit"
-        disabled={loading}
-        className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
+        disabled={
+          loading || (methodType === "iban" && ibanStatus.kind !== "valid")
+        }
+        className="min-h-11 cursor-pointer rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? "A submeter…" : "Submeter versão"}
       </button>
@@ -644,11 +704,17 @@ function DocumentUploadForm({
 }) {
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
+    if (!data.get("file") || !(data.get("file") instanceof File) || !(data.get("file") as File).size) {
+      setLocalError("Seleccione um ficheiro PDF, JPG ou PNG.");
+      return;
+    }
     setLocalError(null);
     setLoading(true);
     try {
@@ -671,10 +737,40 @@ function DocumentUploadForm({
           required
         />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Ficheiro (PDF/JPG/PNG)
-        <input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required />
-      </label>
+      <div className="flex flex-col gap-1 text-sm">
+        <span id="portal-doc-file-label">Ficheiro (PDF/JPG/PNG)</span>
+        <input
+          ref={fileInputRef}
+          id="portal-doc-file"
+          name="file"
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+          required
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0] ?? null;
+            setFileName(file?.name ?? null);
+            setLocalError(null);
+          }}
+        />
+        <div className="flex min-h-11 items-center gap-2 rounded-md border border-stone-300 bg-white p-1.5">
+          <button
+            type="button"
+            className="inline-flex min-h-9 shrink-0 cursor-pointer items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white hover:bg-stone-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900"
+            aria-controls="portal-doc-file"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Browse
+          </button>
+          <p
+            className="min-w-0 flex-1 truncate px-1 text-sm text-stone-600"
+            aria-live="polite"
+            aria-labelledby="portal-doc-file-label"
+          >
+            {fileName ?? "Nenhum ficheiro seleccionado"}
+          </p>
+        </div>
+      </div>
       {localError ? (
         <p className="text-sm text-red-700" role="alert">
           {localError}
@@ -683,7 +779,7 @@ function DocumentUploadForm({
       <button
         type="submit"
         disabled={loading}
-        className="min-h-11 rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100 disabled:opacity-60"
+        className="min-h-11 cursor-pointer rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? "A enviar…" : "Enviar"}
       </button>

@@ -35,7 +35,7 @@ class AdminApiCoverageTest extends TestCase
             ->assertOk()
             ->assertJsonStructure(['data']);
 
-        $this->asSpa()->postJson('/api/v1/admin/commission-rules', [
+        $createdRule = $this->asSpa()->postJson('/api/v1/admin/commission-rules', [
             'business_id' => $business->id,
             'website_id' => $website->id,
             'name' => 'Sale 12%',
@@ -47,7 +47,13 @@ class AdminApiCoverageTest extends TestCase
         ])
             ->assertCreated()
             ->assertJsonPath('data.name', 'Sale 12%')
-            ->assertJsonPath('data.rate_bps', 1200);
+            ->assertJsonPath('data.rate_bps', 1200)
+            ->assertJsonPath('data.business.name', $business->name)
+            ->assertJsonPath('data.website.name', $website->name);
+
+        $this->asSpa()->postJson('/api/v1/admin/commission-rules/'.$createdRule->json('data.id').'/deactivate')
+            ->assertOk()
+            ->assertJsonPath('data.is_active', false);
 
         $this->asSpa()->getJson('/api/v1/admin/integrations')
             ->assertOk()

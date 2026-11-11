@@ -100,6 +100,11 @@ make sonar-scan   # precisa de SONAR_TOKEN + Sonar local
 
 - [`docs/product-spec.md`](docs/product-spec.md)
 - [`docs/demo-walkthrough.md`](docs/demo-walkthrough.md)
+- [`docs/attribution.md`](docs/attribution.md)
+- [`docs/integrations/checkout.md`](docs/integrations/checkout.md)
+- [`docs/guides/admin.md`](docs/guides/admin.md)
+- [`docs/domain-model.md`](docs/domain-model.md)
+- [`docs/branding.md`](docs/branding.md)
 - [`docs/openapi.yaml`](docs/openapi.yaml)
 - [`docs/hardening.md`](docs/hardening.md)
 - [`docs/operations.md`](docs/operations.md)

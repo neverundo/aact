@@ -82,4 +82,17 @@ class CommissionRuleController extends Controller
 
         return new CommissionRuleResource($rule->load(['business', 'website']));
     }
+
+    public function deactivate(Request $request, CommissionRule $commissionRule): CommissionRuleResource
+    {
+        $actor = $request->user();
+
+        if (! $actor->isPlatformAdmin() && ! $actor->isBusinessAdmin($commissionRule->business_id)) {
+            abort(403);
+        }
+
+        return new CommissionRuleResource(
+            $this->rules->deactivate($commissionRule, $actor, $request)
+        );
+    }
 }

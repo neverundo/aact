@@ -19,6 +19,9 @@ class PaymentMethodVersionResource extends JsonResource
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
+            'user_id' => $this->user_id,
+            'business_id' => $this->business_id,
+            'business_membership_id' => $this->business_membership_id,
             'method_type' => $this->method_type->value,
             'display_mask' => $this->display_mask,
             'status' => $this->status->value,
@@ -26,6 +29,15 @@ class PaymentMethodVersionResource extends JsonResource
             'reviewed_at' => $this->reviewed_at?->toIso8601String(),
             'review_notes' => $this->review_notes,
             'created_at' => $this->created_at?->toIso8601String(),
+            'user' => $this->whenLoaded('user', fn () => [
+                'id' => $this->user->id,
+                'name' => $this->user->name,
+                'email' => $this->user->email,
+            ]),
+            'business' => $this->whenLoaded('business', fn () => [
+                'id' => $this->business->id,
+                'name' => $this->business->name,
+            ]),
         ];
     }
 }

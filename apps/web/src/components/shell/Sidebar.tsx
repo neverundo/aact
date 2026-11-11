@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import type { NavGroup } from "@/lib/nav";
+import { usePortalBrand } from "./PortalBrandTheme";
 import { SidebarNav } from "./SidebarNav";
 import { useShell } from "./ShellProvider";
 
@@ -28,12 +29,15 @@ export function Sidebar({
   homeHref: string;
 }) {
   const { collapsed, mobileOpen, setMobileOpen, toggleCollapsed } = useShell();
+  const brand = usePortalBrand();
   const isLg = useSyncExternalStore(
     subscribeIsLg,
     getIsLgSnapshot,
     getIsLgServerSnapshot,
   );
   const railMode = collapsed && isLg;
+  const markLabel = brand.brandName ?? "AACT";
+  const shortMark = brand.brandName ? brand.brandName.slice(0, 1).toUpperCase() : "A";
 
   return (
     <>
@@ -64,16 +68,29 @@ export function Sidebar({
         >
           <Link
             href={homeHref}
-            className="text-sm font-semibold tracking-[0.18em] text-stone-900 uppercase pl-3"
+            className="flex items-center gap-2 pl-3 text-sm font-semibold tracking-[0.18em] text-stone-900 uppercase"
             onClick={() => setMobileOpen(false)}
-            aria-label="AACT"
+            aria-label={markLabel}
+            style={
+              brand.accent
+                ? { color: "var(--brand-primary, #1c1917)" }
+                : undefined
+            }
           >
-            <span className={railMode ? "lg:hidden" : undefined}>AACT</span>
+            {brand.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={brand.logoUrl}
+                alt=""
+                className="h-7 w-7 rounded object-contain"
+              />
+            ) : null}
+            <span className={railMode ? "lg:hidden" : undefined}>{markLabel}</span>
             <span
               className={railMode ? "hidden lg:inline" : "hidden"}
               aria-hidden="true"
             >
-              A
+              {shortMark}
             </span>
           </Link>
           <button

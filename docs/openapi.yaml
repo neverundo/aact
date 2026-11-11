@@ -141,6 +141,131 @@ paths:
       responses:
         "201":
           description: Pending payout request
+  /api/v1/admin/memberships/{id}:
+    get:
+      tags: [Admin]
+      summary: Membership detail (includes user, websites, payment versions, codes)
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Membership
+  /api/v1/admin/businesses/{id}/branding:
+    get:
+      tags: [Admin]
+      summary: Get business branding
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Branding
+    put:
+      tags: [Admin]
+      summary: Update business branding colors
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [primary_color, secondary_color, accent_color]
+              properties:
+                display_name: { type: string, nullable: true }
+                primary_color: { type: string, example: "#1C1917" }
+                secondary_color: { type: string, example: "#57534E" }
+                accent_color: { type: string, example: "#0F766E" }
+      responses:
+        "200":
+          description: Updated branding
+  /api/v1/admin/businesses/{id}/branding/logo:
+    post:
+      tags: [Admin]
+      summary: Upload business logo
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [logo]
+              properties:
+                logo: { type: string, format: binary }
+      responses:
+        "200":
+          description: Logo stored
+  /api/v1/admin/websites/{id}/fetch-brand-assets:
+    post:
+      tags: [Admin]
+      summary: Best-effort favicon/logo fetch from website base_url
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Website with asset paths when fetch succeeded
+  /api/v1/admin/commission-rules/{id}/deactivate:
+    post:
+      tags: [Admin]
+      summary: Deactivate a commission rule
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Rule deactivated
+  /api/v1/branding/businesses/{id}/logo:
+    get:
+      tags: [Portal]
+      summary: Stream business logo (public, rate-limited)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Image bytes
+        "404":
+          description: No logo
+  /api/v1/portal/branding:
+    get:
+      tags: [Portal]
+      summary: Resolve branding for an accessible business
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: query
+          name: business_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Branding
   /api/v1/admin/payout-requests/{id}/approve:
     post:
       tags: [Admin]

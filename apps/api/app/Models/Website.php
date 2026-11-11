@@ -19,12 +19,19 @@ class Website extends Model
         'name',
         'base_url',
         'is_active',
+        'favicon_path',
+        'logo_path',
+        'brand_disk',
+        'favicon_source_url',
+        'logo_source_url',
+        'logo_fetched_at',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'logo_fetched_at' => 'datetime',
         ];
     }
 

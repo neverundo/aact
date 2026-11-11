@@ -54,6 +54,7 @@ export default function AdminEventsPage() {
       <PageHeader
         title="Eventos comerciais"
         description="Ingestão idempotente por (business, source, external_event_id)."
+        helpKey="admin.events"
       />
 
       {error ? (

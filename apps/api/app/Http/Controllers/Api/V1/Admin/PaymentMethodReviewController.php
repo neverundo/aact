@@ -18,14 +18,24 @@ class PaymentMethodReviewController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $user = $request->user();
-        $query = PaymentMethodVersion::query()->latest('id');
+        $query = PaymentMethodVersion::query()
+            ->with(['user', 'business'])
+            ->latest('id');
 
         if (! $user->isPlatformAdmin()) {
             $query->whereIn('business_id', $user->accessibleBusinessIds());
         }
 
-        if ($request->filled('status')) {
+        if ($request->filled('status') && $request->string('status') !== 'all') {
             $query->where('status', $request->string('status'));
+        }
+
+        if ($request->filled('business_id')) {
+            $businessId = (int) $request->integer('business_id');
+            if (! $user->belongsToBusiness($businessId) && ! $user->isPlatformAdmin()) {
+                abort(403);
+            }
+            $query->where('business_id', $businessId);
         }
 
         return PaymentMethodVersionResource::collection($query->paginate(25));

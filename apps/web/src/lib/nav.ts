@@ -175,6 +175,7 @@ const breadcrumbLabels: Record<string, string> = {
   admin: "Admin",
   portal: "Portal",
   businesses: "Businesses",
+  branding: "Branding",
   events: "Eventos",
   "payout-requests": "Payouts",
   invitations: "Convites",

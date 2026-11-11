@@ -10,6 +10,9 @@ export default function HomePage() {
         <h1 className="text-4xl font-semibold tracking-tight text-stone-900">
           AACommissionTool
         </h1>
+        <p className="text-lg font-semibold tracking-tight text-stone-900">
+          Agnostically-Assigning-a-Comission Tool
+        </p>
         <p className="max-w-xl text-lg text-stone-600">
           Plataforma self-hosted de atribuição e liquidação de comissões
           (AACommissionTool).

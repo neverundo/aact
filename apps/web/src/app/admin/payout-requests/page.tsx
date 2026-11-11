@@ -138,6 +138,7 @@ export default function AdminPayoutRequestsPage() {
       <PageHeader
         title="Pedidos de payout"
         description="Aprovar, rejeitar ou marcar como pago após transferência externa."
+        helpKey="admin.payout-requests"
       />
 
       {error ? (

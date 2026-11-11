@@ -6,6 +6,7 @@ use Database\Factories\BusinessFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class Business extends Model
@@ -49,5 +50,11 @@ class Business extends Model
     public function memberships(): HasMany
     {
         return $this->hasMany(BusinessMembership::class);
+    }
+
+    /** @return HasOne<BusinessBranding, $this> */
+    public function branding(): HasOne
+    {
+        return $this->hasOne(BusinessBranding::class);
     }
 }

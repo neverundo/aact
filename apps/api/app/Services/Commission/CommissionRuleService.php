@@ -3,8 +3,10 @@
 namespace App\Services\Commission;
 
 use App\Models\CommissionRule;
+use App\Models\User;
 use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -66,6 +68,25 @@ class CommissionRuleService
         );
 
         return $rule;
+    }
+
+    public function deactivate(CommissionRule $rule, User $actor, ?Request $request = null): CommissionRule
+    {
+        $rule->update(['is_active' => false]);
+
+        $this->audit->log(
+            action: 'commission_rule.deactivated',
+            actor: $actor,
+            businessId: $rule->business_id,
+            entity: new AuditEntity(CommissionRule::class, $rule->id),
+            context: [
+                'name' => $rule->name,
+                'version' => $rule->version,
+            ],
+            request: $request,
+        );
+
+        return $rule->fresh(['business', 'website']) ?? $rule;
     }
 
     public function resolve(int $businessId, int $websiteId, string $eventType, Carbon $at, string $currency): ?CommissionRule

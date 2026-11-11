@@ -1,13 +1,17 @@
 import type { ReactNode } from "react";
+import type { HelpKey } from "@/content/help";
+import { PageHelpButton } from "./PageHelp";
 
 export function PageHeader({
   title,
   description,
   actions,
+  helpKey,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  helpKey?: HelpKey;
 }) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -21,8 +25,11 @@ export function PageHeader({
           </p>
         ) : null}
       </div>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+      {actions || helpKey ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {helpKey ? <PageHelpButton helpKey={helpKey} /> : null}
+          {actions}
+        </div>
       ) : null}
     </div>
   );

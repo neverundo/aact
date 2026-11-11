@@ -19,6 +19,12 @@ class MembershipResource extends JsonResource
         return [
             'id' => $this->id,
             'business_id' => $this->business_id,
+            'user_id' => $this->user_id,
+            'user' => $this->whenLoaded('user', fn () => [
+                'id' => $this->user->id,
+                'name' => $this->user->name,
+                'email' => $this->user->email,
+            ]),
             'business' => $this->whenLoaded('business', fn () => [
                 'id' => $this->business->id,
                 'name' => $this->business->name,

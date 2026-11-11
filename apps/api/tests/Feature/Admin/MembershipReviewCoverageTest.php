@@ -27,6 +27,37 @@ class MembershipReviewCoverageTest extends TestCase
         $this->withoutMiddleware(AuthenticateSession::class);
     }
 
+    public function test_admin_membership_index_includes_user_and_supports_filters(): void
+    {
+        [$admin, $business, $website] = $this->makeBusinessAdmin();
+        $referrer = User::factory()->create([
+            'name' => 'Referrer One',
+            'email' => 'referrer.one@example.test',
+        ]);
+        $pending = BusinessMembership::factory()->create([
+            'business_id' => $business->id,
+            'user_id' => $referrer->id,
+            'role' => MembershipRole::Referrer,
+            'status' => MembershipStatus::Pending,
+        ]);
+        $pending->websites()->attach($website->id);
+
+        $this->actingAs($admin);
+        AuthSession::markFullyAuthenticated();
+
+        $this->asSpa()->getJson('/api/v1/admin/memberships?status=pending&business_id='.$business->id)
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $pending->id)
+            ->assertJsonPath('data.0.user.email', 'referrer.one@example.test')
+            ->assertJsonPath('data.0.user.name', 'Referrer One')
+            ->assertJsonPath('data.0.websites.0.id', $website->id);
+
+        $this->asSpa()->getJson('/api/v1/admin/memberships/'.$pending->id)
+            ->assertOk()
+            ->assertJsonPath('data.user.email', 'referrer.one@example.test')
+            ->assertJsonPath('data.business.id', $business->id);
+    }
+
     public function test_admin_can_reject_and_suspend_memberships(): void
     {
         [$admin, $business, $website] = $this->makeBusinessAdmin();

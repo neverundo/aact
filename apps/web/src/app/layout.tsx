@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AACT — Agnostically-Assigning-a-Comission Tool",
+  title: "Agnostically-Assigning-a-Comission Tool",
   description:
     "Plataforma self-hosted de atribuição e liquidação de comissões (AACommissionTool).",
 };

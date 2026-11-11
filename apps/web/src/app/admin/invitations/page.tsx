@@ -104,6 +104,7 @@ export default function AdminInvitationsPage() {
       <PageHeader
         title="Convites"
         description="Convide referrers para um business. O token em texto só aparece na criação."
+        helpKey="admin.invitations"
         actions={
           <button
             type="button"

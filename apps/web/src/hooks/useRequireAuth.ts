@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { fetchMe, type AuthUser } from "@/lib/auth";
 
 type Options = {
@@ -12,6 +13,8 @@ type Options = {
 export function useRequireAuth(options: Options = {}) {
   const { enforceMfaSetup = true } = options;
   const router = useRouter();
+  const pathname = usePathname();
+  const t = useTranslations("common");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +26,11 @@ export function useRequireAuth(options: Options = {}) {
       try {
         const me = await fetchMe();
         if (cancelled) return;
-        if (enforceMfaSetup && me.session.mfa_setup_only) {
+        if (
+          enforceMfaSetup &&
+          me.session.mfa_setup_only &&
+          !pathname.startsWith("/admin/security")
+        ) {
           router.replace("/admin/security?setup=1");
           return;
         }
@@ -36,7 +43,7 @@ export function useRequireAuth(options: Options = {}) {
           router.replace("/login");
           return;
         }
-        setError(err instanceof Error ? err.message : "Sem acesso.");
+        setError(err instanceof Error ? err.message : t("noAccess"));
         setReady(true);
       }
     })();
@@ -44,7 +51,7 @@ export function useRequireAuth(options: Options = {}) {
     return () => {
       cancelled = true;
     };
-  }, [router, enforceMfaSetup]);
+  }, [router, enforceMfaSetup, pathname, t]);
 
   return { user, ready, error, setError, setUser };
 }

@@ -3,16 +3,19 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Sanctum's AuthenticateSession flushes the session and throws when the stored
- * password hash no longer matches (e.g. after DemoSeeder re-hashes passwords).
- * That turns a subsequent login attempt into a confusing "Unauthenticated."
- * For auth entrypoints, clear the stale session and let the request continue.
+ * Sanctum's AuthenticateSession logs out, flushes the session, and throws when the
+ * stored password hash no longer matches (e.g. after DemoSeeder / admin rotation).
+ *
+ * That breaks auth entrypoints: login/MFA need a usable session+CSRF, and logout is
+ * behind auth:sanctum so a flushed session becomes a confusing 401.
+ *
+ * For those routes, skip the password-hash gate and let the controller establish or
+ * tear down the session normally.
  */
 class SoftAuthenticateSession extends AuthenticateSession
 {
@@ -21,18 +24,14 @@ class SoftAuthenticateSession extends AuthenticateSession
      */
     public function handle(Request $request, Closure $next): Response
     {
-        try {
-            return parent::handle($request, $next);
-        } catch (AuthenticationException $exception) {
-            if ($this->shouldSoftContinue($request)) {
-                return $next($request);
-            }
-
-            throw $exception;
+        if ($this->shouldSkipPasswordHashCheck($request)) {
+            return $next($request);
         }
+
+        return parent::handle($request, $next);
     }
 
-    private function shouldSoftContinue(Request $request): bool
+    private function shouldSkipPasswordHashCheck(Request $request): bool
     {
         return $request->is(
             'api/v1/auth/login',

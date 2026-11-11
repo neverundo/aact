@@ -5,6 +5,7 @@ export type AuthUser = {
   name: string;
   email: string;
   email_verified_at: string | null;
+  preferred_locale: "pt" | "en" | null;
   platform_role: string | null;
   is_admin: boolean;
   mfa: {
@@ -64,5 +65,23 @@ export async function verifyMfa(input: {
 }
 
 export async function logout(): Promise<void> {
-  await apiFetch("/api/v1/auth/logout", { method: "POST" });
+  try {
+    await apiFetch("/api/v1/auth/logout", { method: "POST" });
+  } catch (err) {
+    const status = (err as { status?: number }).status;
+    // Idempotent: already-expired / flushed sessions should still clear the UI.
+    if (status !== 401) {
+      throw err;
+    }
+  }
+}
+
+export async function updatePreferredLocale(
+  locale: "pt" | "en",
+): Promise<AuthUser> {
+  const response = await apiFetch<{ data: AuthUser }>("/api/v1/auth/locale", {
+    method: "PATCH",
+    body: JSON.stringify({ locale }),
+  });
+  return response.data;
 }

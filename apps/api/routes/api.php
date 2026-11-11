@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Admin\PayoutRequestController as AdminPayoutRequ
 use App\Http\Controllers\Api\V1\Admin\WebsiteController;
 use App\Http\Controllers\Api\V1\Auth\EmailOtpController;
 use App\Http\Controllers\Api\V1\Auth\EmailVerificationController;
+use App\Http\Controllers\Api\V1\Auth\LocaleController;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\MfaChallengeController;
@@ -58,6 +59,7 @@ Route::prefix('v1')->group(function (): void {
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/logout', [LoginController::class, 'destroy'])->name('api.v1.auth.logout');
             Route::get('/me', MeController::class)->name('api.v1.auth.me');
+            Route::patch('/locale', [LocaleController::class, 'update'])->name('api.v1.auth.locale');
 
             Route::get('/email/verification-status', [EmailVerificationController::class, 'notice']);
             Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])

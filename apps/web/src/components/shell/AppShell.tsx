@@ -18,9 +18,9 @@ export function AppShell({
 }) {
   return (
     <ShellProvider>
-      <div className="flex min-h-full bg-stone-50">
+      <div className="flex h-dvh overflow-hidden bg-stone-50">
         <Sidebar groups={groups} homeHref={homeHref} />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <AppHeader />
           <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
             {children}

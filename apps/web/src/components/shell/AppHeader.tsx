@@ -1,10 +1,12 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { AccountMenu } from "./AccountMenu";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { useShell } from "./ShellProvider";
 
 export function AppHeader() {
+  const t = useTranslations("common");
   const { setMobileOpen, mobileOpen } = useShell();
 
   return (
@@ -12,7 +14,7 @@ export function AppHeader() {
       <button
         type="button"
         className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-stone-200 bg-white text-stone-700 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 lg:hidden"
-        aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+        aria-label={mobileOpen ? t("closeMenu") : t("openMenu")}
         aria-expanded={mobileOpen}
         aria-controls="app-sidebar"
         onClick={() => setMobileOpen(!mobileOpen)}

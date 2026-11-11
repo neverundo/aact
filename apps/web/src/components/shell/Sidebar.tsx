@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useSyncExternalStore } from "react";
 import type { NavGroup } from "@/lib/nav";
 import { usePortalBrand } from "./PortalBrandTheme";
@@ -28,6 +29,7 @@ export function Sidebar({
   groups: NavGroup[];
   homeHref: string;
 }) {
+  const t = useTranslations("common");
   const { collapsed, mobileOpen, setMobileOpen, toggleCollapsed } = useShell();
   const brand = usePortalBrand();
   const isLg = useSyncExternalStore(
@@ -44,7 +46,7 @@ export function Sidebar({
       {mobileOpen ? (
         <button
           type="button"
-          aria-label="Fechar menu"
+          aria-label={t("closeMenu")}
           className="fixed inset-0 z-40 bg-stone-900/40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
@@ -52,10 +54,10 @@ export function Sidebar({
 
       <aside
         id="app-sidebar"
-        aria-label="Navegação lateral"
+        aria-label={t("sideNav")}
         data-collapsed={railMode ? "true" : "false"}
         className={[
-          "fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-stone-200 bg-white transition-[width,transform] duration-200 ease-out lg:static lg:z-auto lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex h-dvh w-60 shrink-0 flex-col border-r border-stone-200 bg-white transition-[width,transform] duration-200 ease-out lg:static lg:z-auto lg:translate-x-0",
           railMode ? "lg:w-16" : "lg:w-60",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         ].join(" ")}
@@ -97,7 +99,7 @@ export function Sidebar({
             type="button"
             className="hidden min-h-11 min-w-11 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 lg:inline-flex"
             aria-label={
-              collapsed ? "Expandir barra lateral" : "Fechar barra lateral"
+              collapsed ? t("expandSidebar") : t("collapseSidebar")
             }
             aria-expanded={!collapsed}
             aria-controls="app-sidebar"
@@ -108,7 +110,7 @@ export function Sidebar({
           <button
             type="button"
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 lg:hidden"
-            aria-label="Fechar menu"
+            aria-label={t("closeMenu")}
             onClick={() => setMobileOpen(false)}
           >
             <CloseIcon />

@@ -3,7 +3,20 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchMe, logout, type AuthUser } from "@/lib/auth";
+import { useLocale, useTranslations } from "next-intl";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import {
+  fetchMe,
+  logout,
+  updatePreferredLocale,
+  type AuthUser,
+} from "@/lib/auth";
+import {
+  getAppLocale,
+  normalizeLocale,
+  setAppLocale,
+  type AppLocale,
+} from "@/lib/locale";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -16,14 +29,27 @@ export function AccountMenu() {
   const router = useRouter();
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("account");
+  const tCommon = useTranslations("common");
+  const activeLocale = useLocale() as AppLocale;
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [savingLocale, setSavingLocale] = useState(false);
 
   useEffect(() => {
     fetchMe()
-      .then(setUser)
+      .then((me) => {
+        setUser(me);
+        if (me.preferred_locale) {
+          const preferred = normalizeLocale(me.preferred_locale);
+          if (preferred !== getAppLocale()) {
+            setAppLocale(preferred);
+            router.refresh();
+          }
+        }
+      })
       .catch(() => setUser(null));
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!open) return;
@@ -46,11 +72,24 @@ export function AccountMenu() {
     };
   }, [open]);
 
+  async function onLocaleChange(locale: AppLocale) {
+    if (savingLocale || locale === activeLocale) return;
+    setSavingLocale(true);
+    try {
+      const updated = await updatePreferredLocale(locale);
+      setUser(updated);
+      setAppLocale(locale);
+      router.refresh();
+    } finally {
+      setSavingLocale(false);
+    }
+  }
+
   return (
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md border border-stone-200 bg-white px-2 text-sm font-medium text-stone-900 hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900"
+        className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-2 text-sm font-medium text-stone-900 hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
@@ -59,7 +98,7 @@ export function AccountMenu() {
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-900 text-xs font-semibold text-white">
           {user ? initials(user.name) : "…"}
         </span>
-        <span className="sr-only">Menu da conta</span>
+        <span className="sr-only">{tCommon("accountMenu")}</span>
       </button>
 
       {open ? (
@@ -70,10 +109,10 @@ export function AccountMenu() {
         >
           <div className="border-b border-stone-100 px-3 py-2">
             <p className="truncate text-sm font-medium text-stone-900">
-              {user?.name ?? "Conta"}
+              {user?.name ?? tCommon("account")}
             </p>
             <p className="truncate text-xs text-stone-500">
-              {user?.email ?? "A carregar…"}
+              {user?.email ?? t("loadingEmail")}
             </p>
           </div>
           <Link
@@ -82,8 +121,23 @@ export function AccountMenu() {
             className="mt-1 block rounded-md px-3 py-2 text-sm text-stone-700 hover:bg-stone-50"
             onClick={() => setOpen(false)}
           >
-            Segurança da conta
+            {t("security")}
           </Link>
+          <div
+            role="none"
+            className="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-stone-700"
+          >
+            <span>{t("language")}</span>
+            <LanguageSwitcher
+              locale={normalizeLocale(
+                user?.preferred_locale ?? activeLocale,
+              )}
+              onChange={(locale) => {
+                void onLocaleChange(locale);
+              }}
+              ariaLabel={t("languageSwitcher")}
+            />
+          </div>
           <button
             type="button"
             role="menuitem"
@@ -94,7 +148,7 @@ export function AccountMenu() {
               router.replace("/login");
             }}
           >
-            Terminar sessão
+            {t("logout")}
           </button>
         </div>
       ) : null}

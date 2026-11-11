@@ -23,6 +23,7 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'email_verified_at' => $this->email_verified_at?->toIso8601String(),
+            'preferred_locale' => $this->preferred_locale,
             'platform_role' => $this->platform_role?->value,
             'is_admin' => $this->isAdminUser(),
             'mfa' => [

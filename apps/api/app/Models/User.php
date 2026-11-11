@@ -27,6 +27,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property int|null $totp_last_timestep
  * @property Carbon|null $email_otp_enabled_at
  * @property Carbon|null $password_changed_at
+ * @property string|null $preferred_locale
  */
 #[Fillable([
     'name',
@@ -39,6 +40,7 @@ use Laravel\Sanctum\HasApiTokens;
     'totp_last_timestep',
     'email_otp_enabled_at',
     'password_changed_at',
+    'preferred_locale',
 ])]
 #[Hidden(['password', 'remember_token', 'totp_secret'])]
 class User extends Authenticatable implements MustVerifyEmail

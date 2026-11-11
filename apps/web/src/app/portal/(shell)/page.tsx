@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { useShell } from "@/components/shell/ShellProvider";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -107,6 +108,17 @@ async function fetchPortalSnapshot() {
 export default function PortalHomePage() {
   const router = useRouter();
   const { openDrawer, closeDrawer } = useShell();
+  const t = useTranslations("portal.home");
+  const tPayment = useTranslations("portal.payment");
+  const tDocuments = useTranslations("portal.documents");
+  const tPayout = useTranslations("portal.payout");
+  const tReferral = useTranslations("portal.referral");
+  const tCommon = useTranslations("common");
+  const tMembershipStatus = useTranslations("enums.membershipStatus");
+  const tPmStatus = useTranslations("enums.paymentMethodStatus");
+  const tPmType = useTranslations("enums.paymentMethodType");
+  const tScanStatus = useTranslations("enums.documentScanStatus");
+  const tPayoutStatus = useTranslations("enums.payoutRequestStatus");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [codes, setCodes] = useState<ReferralCode[]>([]);
@@ -176,9 +188,8 @@ export default function PortalHomePage() {
     if (selectedMembership === "" || !user) return;
     openDrawer({
       id: "portal-payment",
-      title: "Submeter método de pagamento",
-      description:
-        "Cada submissão cria uma nova versão encriptada. Versões pendentes anteriores ficam superseded.",
+      title: tPayment("drawerTitle"),
+      description: tPayment("drawerDescription"),
       content: (
         <PaymentForm
           defaultHolderName={user.name}
@@ -190,7 +201,7 @@ export default function PortalHomePage() {
                 body: JSON.stringify(payload),
               },
             );
-            setMessage("Método de pagamento submetido para revisão.");
+            setMessage(tPayment("submitted"));
             setError(null);
             closeDrawer();
             await refresh();
@@ -204,8 +215,8 @@ export default function PortalHomePage() {
     if (selectedMembership === "") return;
     openDrawer({
       id: "portal-document",
-      title: "Enviar documento",
-      description: "PDF/JPG/PNG — o ficheiro entra em quarentena/scan.",
+      title: tDocuments("drawerTitle"),
+      description: tDocuments("drawerDescription"),
       content: (
         <DocumentUploadForm
           onSubmit={async (formData) => {
@@ -216,7 +227,7 @@ export default function PortalHomePage() {
                 body: formData,
               },
             );
-            setMessage("Documento enviado para quarentena/scan.");
+            setMessage(tDocuments("uploaded"));
             setError(null);
             closeDrawer();
             await loadDocuments(selectedMembership);
@@ -230,9 +241,8 @@ export default function PortalHomePage() {
     if (selectedMembership === "") return;
     openDrawer({
       id: "portal-payout",
-      title: "Pedir payout",
-      description:
-        "Requer método aprovado, documentos clean e saldo ≥ limiar do business.",
+      title: tPayout("drawerTitle"),
+      description: tPayout("drawerDescription"),
       content: (
         <PayoutRequestForm
           documents={documents}
@@ -244,7 +254,7 @@ export default function PortalHomePage() {
                 ...payload,
               }),
             });
-            setMessage("Pedido de payout submetido.");
+            setMessage(tPayout("submitted"));
             setError(null);
             closeDrawer();
             await refresh();
@@ -267,12 +277,14 @@ export default function PortalHomePage() {
       setLinkUrl(response.url);
       setQrSvg(response.qr_svg ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao gerar link.");
+      setError(
+        err instanceof Error ? err.message : tReferral("generateFailed"),
+      );
     }
   }
 
   if (!user) {
-    return <p className="text-stone-600">A carregar…</p>;
+    return <p className="text-stone-600">{tCommon("loading")}</p>;
   }
 
   const activeMembership = memberships.find((m) => m.id === selectedMembership);
@@ -280,8 +292,8 @@ export default function PortalHomePage() {
   return (
     <div className="flex flex-col gap-10">
       <PageHeader
-        title="Portal do referrer"
-        description={`Sessão de ${user.email}. Complete pagamento e documentos enquanto a membership estiver pendente; códigos só após aprovação.`}
+        title={t("title")}
+        description={t("description", { email: user.email })}
         helpKey="portal.home"
       />
 
@@ -293,16 +305,21 @@ export default function PortalHomePage() {
       {message ? <p className="text-sm text-emerald-800">{message}</p> : null}
 
       <section id="memberships" className="scroll-mt-20 space-y-3">
-        <h2 className="text-lg font-semibold text-stone-900">Memberships</h2>
+        <h2 className="text-lg font-semibold text-stone-900">
+          {t("memberships")}
+        </h2>
         {memberships.length === 0 ? (
           <EmptyState
-            title="Sem memberships"
-            description="Aceite um convite para começar."
+            title={t("emptyMembershipsTitle")}
+            description={t("emptyMembershipsDescription")}
           />
         ) : (
           <ul className="divide-y divide-stone-200 border-y border-stone-200">
             {memberships.map((membership) => {
               const selected = membership.id === selectedMembership;
+              const statusLabel = tMembershipStatus.has(membership.status)
+                ? tMembershipStatus(membership.status)
+                : membership.status;
               return (
                 <li key={membership.id} className="py-3 text-sm">
                   <button
@@ -320,7 +337,7 @@ export default function PortalHomePage() {
                       {membership.business?.name ?? `#${membership.id}`}
                     </span>
                     <StatusBadge tone={toneForStatus(membership.status)}>
-                      {membership.status}
+                      {statusLabel}
                     </StatusBadge>
                   </button>
                 </li>
@@ -336,10 +353,10 @@ export default function PortalHomePage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-stone-900">
-                  Método de pagamento
+                  {tPayment("title")}
                 </h2>
                 <p className="text-sm text-stone-600">
-                  Versões encriptadas; só a máscara é visível aqui.
+                  {tPayment("description")}
                 </p>
               </div>
               <button
@@ -347,26 +364,34 @@ export default function PortalHomePage() {
                 className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
                 onClick={openPaymentDrawer}
               >
-                Submeter versão
+                {tPayment("submitVersion")}
               </button>
             </div>
             {(activeMembership.payment_methods ?? []).length === 0 ? (
-              <EmptyState title="Sem métodos submetidos" />
+              <EmptyState title={tPayment("empty")} />
             ) : (
               <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
-                {(activeMembership.payment_methods ?? []).map((pm) => (
-                  <li
-                    key={pm.id}
-                    className="flex flex-wrap items-center justify-between gap-2 py-3"
-                  >
-                    <span>
-                      v{pm.version} · {pm.method_type} · {pm.display_mask}
-                    </span>
-                    <StatusBadge tone={toneForStatus(pm.status)}>
-                      {pm.status}
-                    </StatusBadge>
-                  </li>
-                ))}
+                {(activeMembership.payment_methods ?? []).map((pm) => {
+                  const typeLabel = tPmType.has(pm.method_type)
+                    ? tPmType(pm.method_type)
+                    : pm.method_type;
+                  const statusLabel = tPmStatus.has(pm.status)
+                    ? tPmStatus(pm.status)
+                    : pm.status;
+                  return (
+                    <li
+                      key={pm.id}
+                      className="flex flex-wrap items-center justify-between gap-2 py-3"
+                    >
+                      <span>
+                        v{pm.version} · {typeLabel} · {pm.display_mask}
+                      </span>
+                      <StatusBadge tone={toneForStatus(pm.status)}>
+                        {statusLabel}
+                      </StatusBadge>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>
@@ -374,34 +399,39 @@ export default function PortalHomePage() {
           <section id="documentos" className="scroll-mt-20 space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h2 className="text-lg font-semibold text-stone-900">
-                Documentos
+                {tDocuments("title")}
               </h2>
               <button
                 type="button"
                 className="min-h-11 rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
                 onClick={openDocumentDrawer}
               >
-                Enviar documento
+                {tDocuments("send")}
               </button>
             </div>
             {documents.length === 0 ? (
-              <EmptyState title="Sem documentos nesta membership" />
+              <EmptyState title={tDocuments("empty")} />
             ) : (
               <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
-                {documents.map((doc) => (
-                  <li
-                    key={doc.uuid}
-                    className="flex flex-wrap items-center justify-between gap-2 py-3"
-                  >
-                    <span>
-                      {doc.original_filename} · {doc.purpose}
-                    </span>
-                    <StatusBadge tone={toneForStatus(doc.scan_status)}>
-                      {doc.scan_status}
-                      {doc.usable ? " · usable" : ""}
-                    </StatusBadge>
-                  </li>
-                ))}
+                {documents.map((doc) => {
+                  const scanLabel = tScanStatus.has(doc.scan_status)
+                    ? tScanStatus(doc.scan_status)
+                    : doc.scan_status;
+                  return (
+                    <li
+                      key={doc.uuid}
+                      className="flex flex-wrap items-center justify-between gap-2 py-3"
+                    >
+                      <span>
+                        {doc.original_filename} · {doc.purpose}
+                      </span>
+                      <StatusBadge tone={toneForStatus(doc.scan_status)}>
+                        {scanLabel}
+                        {doc.usable ? tDocuments("usableSuffix") : ""}
+                      </StatusBadge>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>
@@ -410,34 +440,42 @@ export default function PortalHomePage() {
 
       <section id="saldos" className="scroll-mt-20 space-y-3">
         <h2 className="text-lg font-semibold text-stone-900">
-          Saldos e comissões
+          {t("balancesTitle")}
         </h2>
         {balances.length === 0 ? (
-          <EmptyState title="Sem saldo ledger ainda" />
+          <EmptyState title={t("emptyBalances")} />
         ) : (
           <ul className="space-y-1 text-sm text-stone-600">
             {balances.map((balance) => (
               <li key={balance.membership_id}>
-                {balance.business_name ?? `#${balance.membership_id}`}:{" "}
-                {balance.payable_minor} {balance.currency} (limiar payout{" "}
-                {balance.payout_threshold_minor})
+                {t("balanceLine", {
+                  name: balance.business_name ?? `#${balance.membership_id}`,
+                  amount: balance.payable_minor,
+                  code: balance.currency ?? "",
+                  count: balance.payout_threshold_minor,
+                })}
               </li>
             ))}
           </ul>
         )}
         {commissions.length === 0 ? (
-          <EmptyState title="Sem comissões" />
+          <EmptyState title={t("emptyCommissions")} />
         ) : (
           <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
             {commissions.slice(0, 8).map((commission) => (
               <li key={commission.id} className="py-2">
-                #{commission.id} · {commission.commission_minor}{" "}
-                {commission.currency} · {commission.status} (base{" "}
-                {commission.basis_amount_minor}
-                {commission.reversed_minor
-                  ? `; revertido ${commission.reversed_minor}`
-                  : ""}
-                )
+                {t("commissionLine", {
+                  id: commission.id,
+                  amount: commission.commission_minor,
+                  code: commission.currency,
+                  title: commission.status,
+                  payments: commission.basis_amount_minor,
+                  documents: commission.reversed_minor
+                    ? t("commissionReversed", {
+                        amount: commission.reversed_minor,
+                      })
+                    : "",
+                })}
               </li>
             ))}
           </ul>
@@ -449,39 +487,45 @@ export default function PortalHomePage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-stone-900">
-                Pedidos de payout
+                {tPayout("title")}
               </h2>
-              <p className="text-sm text-stone-600">
-                O pagamento é externo; aqui só pedimos e registamos settlement.
-              </p>
+              <p className="text-sm text-stone-600">{tPayout("description")}</p>
             </div>
             <button
               type="button"
               className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
               onClick={openPayoutDrawer}
             >
-              Pedir payout
+              {tPayout("request")}
             </button>
           </div>
           {payouts.length === 0 ? (
-            <EmptyState title="Sem pedidos" />
+            <EmptyState title={tPayout("empty")} />
           ) : (
             <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
-              {payouts.map((payout) => (
-                <li key={payout.id} className="flex flex-wrap items-center gap-2 py-2">
-                  <span>
-                    #{payout.id} · {payout.amount_minor} {payout.currency}
-                  </span>
-                  <StatusBadge tone={toneForStatus(payout.status)}>
-                    {payout.status}
-                  </StatusBadge>
-                  {payout.status_reason ? (
-                    <span className="text-stone-500">
-                      — {payout.status_reason}
+              {payouts.map((payout) => {
+                const statusLabel = tPayoutStatus.has(payout.status)
+                  ? tPayoutStatus(payout.status)
+                  : payout.status;
+                return (
+                  <li
+                    key={payout.id}
+                    className="flex flex-wrap items-center gap-2 py-2"
+                  >
+                    <span>
+                      #{payout.id} · {payout.amount_minor} {payout.currency}
                     </span>
-                  ) : null}
-                </li>
-              ))}
+                    <StatusBadge tone={toneForStatus(payout.status)}>
+                      {statusLabel}
+                    </StatusBadge>
+                    {payout.status_reason ? (
+                      <span className="text-stone-500">
+                        — {payout.status_reason}
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
@@ -489,12 +533,12 @@ export default function PortalHomePage() {
 
       <section id="referral" className="scroll-mt-20 space-y-3">
         <h2 className="text-lg font-semibold text-stone-900">
-          Códigos de referral
+          {tReferral("title")}
         </h2>
         {codes.length === 0 ? (
           <EmptyState
-            title="Sem códigos"
-            description="Disponíveis apenas após aprovação da membership."
+            title={tReferral("emptyTitle")}
+            description={tReferral("emptyDescription")}
           />
         ) : (
           <ul className="space-y-2 text-sm">
@@ -515,7 +559,7 @@ export default function PortalHomePage() {
                       className="min-h-11 underline-offset-2 hover:underline"
                       onClick={() => buildLink(code.id, websiteId)}
                     >
-                      Gerar link + QR
+                      {tReferral("generateLink")}
                     </button>
                   ) : null}
                 </li>
@@ -525,9 +569,9 @@ export default function PortalHomePage() {
         )}
         {linkUrl ? (
           <p className="break-all text-sm">
-            Link:{" "}
+            {tReferral("linkLabel")}{" "}
             <a className="underline" href={linkUrl}>
-              {linkUrl}
+              {tReferral("linkValue", { url: linkUrl })}
             </a>
           </p>
         ) : null}
@@ -537,10 +581,7 @@ export default function PortalHomePage() {
             dangerouslySetInnerHTML={{ __html: qrSvg }}
           />
         ) : null}
-        <p className="text-xs text-stone-500">
-          Passar ?ref=CODE no site externo não atribui automaticamente; o
-          sistema externo tem de enviar o código nos eventos de conversão.
-        </p>
+        <p className="text-xs text-stone-500">{tReferral("note")}</p>
       </section>
     </div>
   );
@@ -558,6 +599,9 @@ function PaymentForm({
     holder_name: string;
   }) => Promise<void>;
 }) {
+  const t = useTranslations("portal.payment");
+  const tCommon = useTranslations("common");
+  const tIban = useTranslations("validation.iban");
   const [methodType, setMethodType] = useState<"iban" | "mbway">("iban");
   const [iban, setIban] = useState("");
   const [phone, setPhone] = useState("");
@@ -582,8 +626,8 @@ function PaymentForm({
     if (methodType === "iban" && !isValidIban(iban)) {
       setLocalError(
         ibanStatus.kind === "invalid" || ibanStatus.kind === "incomplete"
-          ? ibanStatus.message
-          : "Indique um IBAN válido.",
+          ? tIban(ibanStatus.messageKey, ibanStatus.values)
+          : tIban("required"),
       );
       return;
     }
@@ -597,9 +641,7 @@ function PaymentForm({
         holder_name: holderName,
       });
     } catch (err) {
-      setLocalError(
-        err instanceof Error ? err.message : "Falha no pagamento.",
-      );
+      setLocalError(err instanceof Error ? err.message : t("failed"));
     } finally {
       setLoading(false);
     }
@@ -608,20 +650,20 @@ function PaymentForm({
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
       <label className="flex flex-col gap-1 text-sm">
-        Tipo
+        {t("type")}
         <select
           className="rounded-md border border-stone-300 px-3 py-2"
           value={methodType}
           onChange={(e) => setMethodType(e.target.value as "iban" | "mbway")}
         >
-          <option value="iban">IBAN</option>
-          <option value="mbway">MB WAY</option>
+          <option value="iban">{t("typeIban")}</option>
+          <option value="mbway">{t("typeMbway")}</option>
         </select>
       </label>
       {methodType === "iban" ? (
         <div className="flex flex-col gap-1 text-sm">
           <label htmlFor="portal-iban" className="font-medium">
-            IBAN
+            {t("iban")}
           </label>
           <input
             id="portal-iban"
@@ -651,17 +693,17 @@ function PaymentForm({
                     : "text-sm text-stone-500"
               }
             >
-              {ibanStatus.message}
+              {tIban(ibanStatus.messageKey, ibanStatus.values)}
             </p>
           ) : (
             <p id="portal-iban-status" className="sr-only">
-              Introduza o IBAN; as letras são convertidas para maiúsculas.
+              {t("ibanHint")}
             </p>
           )}
         </div>
       ) : (
         <label className="flex flex-col gap-1 text-sm">
-          Telemóvel MB WAY
+          {t("phone")}
           <input
             className="rounded-md border border-stone-300 px-3 py-2"
             value={phone}
@@ -671,7 +713,7 @@ function PaymentForm({
         </label>
       )}
       <label className="flex flex-col gap-1 text-sm">
-        Titular
+        {t("holder")}
         <input
           className="rounded-md border border-stone-300 px-3 py-2"
           value={holderName}
@@ -691,7 +733,7 @@ function PaymentForm({
         }
         className="min-h-11 cursor-pointer rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "A submeter…" : "Submeter versão"}
+        {loading ? tCommon("submitting") : t("submitVersion")}
       </button>
     </form>
   );
@@ -702,6 +744,8 @@ function DocumentUploadForm({
 }: {
   onSubmit: (data: FormData) => Promise<void>;
 }) {
+  const t = useTranslations("portal.documents");
+  const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -711,8 +755,12 @@ function DocumentUploadForm({
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    if (!data.get("file") || !(data.get("file") instanceof File) || !(data.get("file") as File).size) {
-      setLocalError("Seleccione um ficheiro PDF, JPG ou PNG.");
+    if (
+      !data.get("file") ||
+      !(data.get("file") instanceof File) ||
+      !(data.get("file") as File).size
+    ) {
+      setLocalError(t("selectFile"));
       return;
     }
     setLocalError(null);
@@ -720,7 +768,9 @@ function DocumentUploadForm({
     try {
       await onSubmit(data);
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Falha no upload.");
+      setLocalError(
+        err instanceof Error ? err.message : tCommon("uploadFailed"),
+      );
     } finally {
       setLoading(false);
     }
@@ -729,7 +779,7 @@ function DocumentUploadForm({
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       <label className="flex flex-col gap-1 text-sm">
-        Finalidade
+        {t("purpose")}
         <input
           name="purpose"
           className="rounded-md border border-stone-300 px-3 py-2"
@@ -738,7 +788,7 @@ function DocumentUploadForm({
         />
       </label>
       <div className="flex flex-col gap-1 text-sm">
-        <span id="portal-doc-file-label">Ficheiro (PDF/JPG/PNG)</span>
+        <span id="portal-doc-file-label">{t("file")}</span>
         <input
           ref={fileInputRef}
           id="portal-doc-file"
@@ -760,14 +810,14 @@ function DocumentUploadForm({
             aria-controls="portal-doc-file"
             onClick={() => fileInputRef.current?.click()}
           >
-            Browse
+            {t("browse")}
           </button>
           <p
             className="min-w-0 flex-1 truncate px-1 text-sm text-stone-600"
             aria-live="polite"
             aria-labelledby="portal-doc-file-label"
           >
-            {fileName ?? "Nenhum ficheiro seleccionado"}
+            {fileName ?? t("noFile")}
           </p>
         </div>
       </div>
@@ -781,7 +831,7 @@ function DocumentUploadForm({
         disabled={loading}
         className="min-h-11 cursor-pointer rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "A enviar…" : "Enviar"}
+        {loading ? t("sending") : t("sendSubmit")}
       </button>
     </form>
   );
@@ -797,6 +847,8 @@ function PayoutRequestForm({
     amount_minor?: number;
   }) => Promise<void>;
 }) {
+  const t = useTranslations("portal.payout");
+  const tCommon = useTranslations("common");
   const usableDocs = documents.filter((d) => d.usable);
   const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
   const [payoutAmount, setPayoutAmount] = useState("");
@@ -813,9 +865,7 @@ function PayoutRequestForm({
         amount_minor: payoutAmount ? Number(payoutAmount) : undefined,
       });
     } catch (err) {
-      setLocalError(
-        err instanceof Error ? err.message : "Falha no pedido de payout.",
-      );
+      setLocalError(err instanceof Error ? err.message : t("failed"));
     } finally {
       setLoading(false);
     }
@@ -824,11 +874,9 @@ function PayoutRequestForm({
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Documentos clean</legend>
+        <legend className="text-sm font-medium">{t("cleanDocs")}</legend>
         {usableDocs.length === 0 ? (
-          <p className="text-sm text-stone-500">
-            Sem documentos clean nesta membership.
-          </p>
+          <p className="text-sm text-stone-500">{t("noCleanDocs")}</p>
         ) : (
           usableDocs.map((doc) => (
             <label
@@ -852,13 +900,13 @@ function PayoutRequestForm({
         )}
       </fieldset>
       <label className="flex flex-col gap-1 text-sm">
-        Montante (minor units, opcional = saldo total)
+        {t("amountOptional")}
         <input
           className="rounded-md border border-stone-300 px-3 py-2"
           inputMode="numeric"
           value={payoutAmount}
           onChange={(e) => setPayoutAmount(e.target.value)}
-          placeholder="ex. 5000"
+          placeholder={t("amountPlaceholder")}
         />
       </label>
       {localError ? (
@@ -871,7 +919,7 @@ function PayoutRequestForm({
         className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
         disabled={loading || selectedDocs.length === 0}
       >
-        {loading ? "A submeter…" : "Pedir payout"}
+        {loading ? tCommon("submitting") : t("request")}
       </button>
     </form>
   );

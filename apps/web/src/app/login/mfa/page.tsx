@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { AuthShell } from "@/components/AuthShell";
 import { verifyMfa } from "@/lib/auth";
 
@@ -30,6 +31,7 @@ function readStoredChallenge(): Challenge | null {
 
 export default function MfaPage() {
   const router = useRouter();
+  const t = useTranslations("auth");
   const [challenge] = useState<Challenge | null>(() => readStoredChallenge());
   const [method, setMethod] = useState(() => challenge?.methods[0] ?? "totp");
   const [code, setCode] = useState("");
@@ -45,13 +47,13 @@ export default function MfaPage() {
   const methodLabel = useMemo(() => {
     switch (method) {
       case "email_otp":
-        return "Código enviado por email";
+        return t("mfaEmailOtpLabel");
       case "recovery_code":
-        return "Código de recuperação";
+        return t("mfaRecoveryLabel");
       default:
-        return "Código da aplicação autenticadora";
+        return t("mfaTotpLabel");
     }
-  }, [method]);
+  }, [method, t]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -69,7 +71,7 @@ export default function MfaPage() {
       sessionStorage.removeItem("aact.mfa_challenge");
       router.push(result.user.is_admin ? "/admin" : "/portal");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Código inválido.");
+      setError(err instanceof Error ? err.message : t("mfaInvalid"));
     } finally {
       setLoading(false);
     }
@@ -78,23 +80,20 @@ export default function MfaPage() {
   if (!challenge) {
     return (
       <main className="mx-auto max-w-md px-6 py-16 text-stone-600">
-        A redirecionar…
+        {t("mfaRedirecting")}
       </main>
     );
   }
 
   return (
-    <AuthShell title="Segundo fator">
-      <p className="text-stone-600">
-        A sessão só é criada depois de validar o segundo fator. O desafio
-        expira em breve.
-      </p>
+    <AuthShell title={t("mfaTitle")}>
+      <p className="text-stone-600">{t("mfaDescription")}</p>
 
       <form className="space-y-4" onSubmit={onSubmit}>
         {challenge.methods.length > 1 ? (
           <div className="space-y-2">
             <label className="block text-sm font-medium" htmlFor="method">
-              Método
+              {t("mfaMethod")}
             </label>
             <select
               id="method"
@@ -136,7 +135,7 @@ export default function MfaPage() {
           disabled={loading}
           className="w-full rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
         >
-          {loading ? "A verificar…" : "Confirmar"}
+          {loading ? t("mfaVerifying") : t("mfaConfirm")}
         </button>
       </form>
     </AuthShell>

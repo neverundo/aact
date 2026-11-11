@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useShell, type DrawerState } from "./ShellProvider";
 
 const DRAWER_MS = 250;
 
 export function ContextDrawer() {
   const { drawer, closeDrawer } = useShell();
+  const t = useTranslations("common");
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -96,7 +98,7 @@ export function ContextDrawer() {
     <div className="fixed inset-0 z-50 flex justify-end" aria-hidden={!open}>
       <button
         type="button"
-        aria-label="Fechar painel"
+        aria-label={t("closePanel")}
         className={[
           "absolute inset-0 bg-stone-900/40 transition-opacity duration-[250ms] ease-out",
           open ? "opacity-100" : "opacity-0",
@@ -110,7 +112,7 @@ export function ContextDrawer() {
         aria-labelledby={titleId}
         aria-describedby={rendered.description ? descriptionId : undefined}
         className={[
-          "relative flex h-full w-full max-w-md flex-col border-l border-stone-200 bg-white shadow-xl",
+          "relative flex h-full w-full max-w-xl flex-col border-l border-stone-200 bg-white shadow-xl",
           "transition-transform duration-[250ms] ease-out will-change-transform",
           // open: slide in from-right-to-left; close: slide out from-left-to-right
           open ? "translate-x-0" : "translate-x-full",
@@ -130,7 +132,7 @@ export function ContextDrawer() {
           <button
             type="button"
             className="inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900"
-            aria-label="Fechar"
+            aria-label={t("close")}
             onClick={closeDrawer}
           >
             <svg

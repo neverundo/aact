@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
@@ -15,6 +16,8 @@ type TotpBegin = {
 
 export default function AdminSecurityPage() {
   const router = useRouter();
+  const t = useTranslations("admin.security");
+  const tCommon = useTranslations("common");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [setup, setSetup] = useState<TotpBegin | null>(null);
   const [code, setCode] = useState("");
@@ -35,9 +38,9 @@ export default function AdminSecurityPage() {
         method: "POST",
       });
       setSetup(result);
-      setMessage("Confirme um código da app antes de o TOTP ficar ativo.");
+      setMessage(t("beginMessage"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao iniciar TOTP.");
+      setError(err instanceof Error ? err.message : t("beginFailed"));
     }
   }
 
@@ -54,52 +57,53 @@ export default function AdminSecurityPage() {
       });
       setRecoveryCodes(result.recovery_codes);
       setSetup(null);
-      setMessage("TOTP ativado. Guarde os códigos de recuperação agora.");
+      setMessage(t("confirmMessage"));
       setUser(await fetchMe());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Código inválido.");
+      setError(err instanceof Error ? err.message : t("invalidCode"));
     }
   }
 
   if (!user) {
-    return <p className="text-stone-600">A carregar…</p>;
+    return <p className="text-stone-600">{tCommon("loading")}</p>;
   }
 
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
-        title="Segurança da conta"
+        title={t("title")}
         description={
           user.session.mfa_setup_only
-            ? "Acesso administrativo bloqueado até configurar TOTP."
-            : "Gerir MFA, sessões e reautenticação."
+            ? t("descriptionBlocked")
+            : t("descriptionNormal")
         }
       />
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium">Estado</h2>
+        <h2 className="text-lg font-medium">{t("stateHeading")}</h2>
         <ul className="space-y-2 text-sm text-stone-700">
-          <li>Email: {user.email}</li>
+          <li>{t("email", { email: user.email })}</li>
           <li className="flex flex-wrap items-center gap-2">
-            TOTP:{" "}
+            {t("totp")}{" "}
             <StatusBadge tone={user.mfa.totp_enabled ? "success" : "warning"}>
-              {user.mfa.totp_enabled ? "ativo" : "inativo"}
+              {user.mfa.totp_enabled ? tCommon("active") : tCommon("inactive")}
             </StatusBadge>
           </li>
           <li className="flex flex-wrap items-center gap-2">
-            Email OTP:{" "}
+            {t("emailOtp")}{" "}
             <StatusBadge
               tone={user.mfa.email_otp_enabled ? "success" : "neutral"}
             >
-              {user.mfa.email_otp_enabled ? "ativo" : "inativo"}
+              {user.mfa.email_otp_enabled
+                ? tCommon("active")
+                : tCommon("inactive")}
             </StatusBadge>
-            <span className="text-stone-500">
-              (garantia inferior ao TOTP)
-            </span>
+            <span className="text-stone-500">{t("emailOtpHint")}</span>
           </li>
           <li>
-            Códigos de recuperação restantes:{" "}
-            {user.mfa.recovery_codes_remaining}
+            {t("recoveryRemaining", {
+              count: user.mfa.recovery_codes_remaining,
+            })}
           </li>
         </ul>
       </section>
@@ -111,7 +115,7 @@ export default function AdminSecurityPage() {
             onClick={beginTotp}
             className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
           >
-            Configurar autenticador (TOTP)
+            {t("setupTotp")}
           </button>
 
           {setup ? (
@@ -121,7 +125,7 @@ export default function AdminSecurityPage() {
                 dangerouslySetInnerHTML={{ __html: setup.qr_svg }}
               />
               <p className="break-all text-xs text-stone-500">
-                Segredo (apenas durante o setup): {setup.secret}
+                {t("secretDuringSetup", { secret: setup.secret })}
               </p>
               <form
                 className="flex flex-wrap items-end gap-3"
@@ -129,7 +133,7 @@ export default function AdminSecurityPage() {
               >
                 <div className="space-y-1">
                   <label className="block text-sm font-medium" htmlFor="totp">
-                    Código de confirmação
+                    {t("confirmCode")}
                   </label>
                   <input
                     id="totp"
@@ -143,7 +147,7 @@ export default function AdminSecurityPage() {
                   type="submit"
                   className="min-h-11 rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
                 >
-                  Confirmar e ativar
+                  {t("confirmActivate")}
                 </button>
               </form>
             </div>
@@ -154,7 +158,7 @@ export default function AdminSecurityPage() {
       {recoveryCodes ? (
         <section className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-4">
           <h2 className="font-medium text-amber-950">
-            Códigos de recuperação (mostrados uma vez)
+            {t("recoveryCodesTitle")}
           </h2>
           <ul className="grid gap-1 font-mono text-sm text-amber-950 sm:grid-cols-2">
             {recoveryCodes.map((item) => (

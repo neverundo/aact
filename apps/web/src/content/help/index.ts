@@ -1,5 +1,3 @@
-import type { HelpContent } from "./types";
-
 export type HelpKey =
   | "admin.businesses"
   | "admin.business-detail"
@@ -13,135 +11,16 @@ export type HelpKey =
   | "admin.payout-requests"
   | "portal.home";
 
-const helpCatalog: Record<HelpKey, HelpContent> = {
-  "admin.businesses": {
-    title: "Businesses",
-    summary:
-      "Um business é o tenant comercial. Cada business tem websites, memberships, regras e credenciais de integração.",
-    actions: [
-      "Criar business (nome, slug, moeda, limiar de payout).",
-      "Abrir detalhe para gerir websites e branding.",
-    ],
-    prerequisites: ["Precisa de papel platform admin ou business admin."],
-    docsHref: "/docs/guides/admin.md",
-  },
-  "admin.business-detail": {
-    title: "Detalhe do business",
-    summary:
-      "Edite dados do business e gerencie websites. Cada website pode ter credenciais HMAC e regras de comissão próprias.",
-    actions: [
-      "Editar nome, slug, moeda e limiar.",
-      "Adicionar/editar/remover websites.",
-      "Atalhos para criar credencial ou regra no website.",
-      "Abrir branding do business.",
-    ],
-    pitfalls: [
-      "Remover um website com eventos/credenciais associados pode falhar por restrições de FK.",
-    ],
-  },
-  "admin.business-branding": {
-    title: "Branding",
-    summary:
-      "Cores e logotipo aplicados ao portal do referrer e à página de convite deste business.",
-    actions: [
-      "Definir cores primary/secondary/accent.",
-      "Carregar logotipo.",
-      "Por website: obter favicon/logo automaticamente a partir da base_url.",
-    ],
-    docsHref: "/docs/branding.md",
-  },
-  "admin.memberships": {
-    title: "Memberships",
-    summary:
-      "Memberships de referrers criadas via convite. A aprovação exige método de pagamento aprovado e gera códigos de referral.",
-    actions: [
-      "Filtrar por estado e business.",
-      "Ver detalhe (membro, websites, pagamentos, códigos).",
-      "Aprovar, rejeitar ou suspender.",
-    ],
-    prerequisites: [
-      "Convite aceite → membership pending.",
-      "Método de pagamento aprovado antes da aprovação.",
-    ],
-  },
-  "admin.payment-methods": {
-    title: "Métodos de pagamento",
-    summary:
-      "Histórico versionado (IBAN/MB Way). Versões aprovadas, rejeitadas, pendentes e substituídas.",
-    actions: [
-      "Filtrar por estado.",
-      "Aprovar/rejeitar pendentes.",
-      "Reveal do payload com step-up (auditado).",
-    ],
-    pitfalls: [
-      "Reveal exige palavra-passe recente (step-up).",
-      "Versões superseded são histórico read-only.",
-    ],
-  },
-  "admin.integrations": {
-    title: "Integrações",
-    summary:
-      "Credenciais bearer + HMAC por business/website/source para ingestão de eventos de checkout externo.",
-    actions: [
-      "Criar credencial (source estável, ex. node_checkout).",
-      "Rodar ou revogar credenciais.",
-      "Consultar o guia “Como integrar”.",
-    ],
-    prerequisites: [
-      "Business e website existentes.",
-      "Source único por business.",
-    ],
-    pitfalls: [
-      "Token e HMAC só aparecem na criação/rotação.",
-      "Source não é um runtime: é o identificador do canal (idempotência).",
-    ],
-    docsHref: "/docs/integrations/checkout.md",
-  },
-  "admin.commission-rules": {
-    title: "Regras de comissão",
-    summary:
-      "Regras versionadas em basis points. Podem ser globais ao business ou scoped a um website.",
-    actions: [
-      "Criar regra (taxa bps, website opcional).",
-      "Desativar regra ativa.",
-      "Ver âmbito (business + website).",
-    ],
-    docsHref: "/docs/attribution.md",
-  },
-  "admin.invitations": {
-    title: "Convites",
-    summary:
-      "Convide referrers para um business, com websites atribuídos. O token em texto só aparece na criação.",
-    actions: ["Criar, revogar ou reenviar convites."],
-  },
-  "admin.events": {
-    title: "Eventos comerciais",
-    summary:
-      "Eventos normalizados (sale/refund/chargeback) ingeridos via integração. Estados: received, attributed, ignored.",
-    actions: ["Consultar eventos e motivos de ignore."],
-    docsHref: "/docs/attribution.md",
-  },
-  "admin.payout-requests": {
-    title: "Payouts",
-    summary:
-      "Pedidos de liquidação do referrer. AACT regista o pagamento externo; não transfere dinheiro.",
-    actions: ["Aprovar, rejeitar ou marcar como pago."],
-  },
-  "portal.home": {
-    title: "Portal do referrer",
-    summary:
-      "Área do referrer: memberships, método de pagamento, documentos, saldos, payouts e códigos de referral.",
-    actions: [
-      "Submeter IBAN/MB Way.",
-      "Carregar documento de identidade.",
-      "Gerar link/QR do código.",
-      "Pedir payout quando o saldo atingir o limiar.",
-    ],
-  },
-};
-
-export function getHelp(key: HelpKey): HelpContent {
-  return helpCatalog[key];
-}
-
-export { helpCatalog };
+export const HELP_KEYS: readonly HelpKey[] = [
+  "admin.businesses",
+  "admin.business-detail",
+  "admin.business-branding",
+  "admin.memberships",
+  "admin.payment-methods",
+  "admin.integrations",
+  "admin.commission-rules",
+  "admin.invitations",
+  "admin.events",
+  "admin.payout-requests",
+  "portal.home",
+] as const;

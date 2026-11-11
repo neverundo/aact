@@ -1,0 +1,127 @@
+{
+  "admin": {
+    "businesses": {
+      "title": "Businesses",
+      "summary": "A business is the commercial tenant. Each business has websites, memberships, rules and integration credentials.",
+      "actions": [
+        "Create a business (name, slug, currency, payout threshold).",
+        "Open detail to manage websites and branding."
+      ],
+      "prerequisites": [
+        "Requires platform admin or business admin role."
+      ],
+      "docsHref": "/docs/guides/admin.md"
+    },
+    "business-detail": {
+      "title": "Business detail",
+      "summary": "Edit business data and manage websites. Each website can have its own HMAC credentials and commission rules.",
+      "actions": [
+        "Edit name, slug, currency and threshold.",
+        "Add/edit/remove websites.",
+        "Shortcuts to create a credential or rule on the website.",
+        "Open business branding."
+      ],
+      "pitfalls": [
+        "Removing a website with related events/credentials may fail due to FK constraints."
+      ]
+    },
+    "business-branding": {
+      "title": "Branding",
+      "summary": "Colours and logo applied to the referrer portal and invitation page for this business.",
+      "actions": [
+        "Set primary/secondary/accent colours.",
+        "Upload a logo.",
+        "Per website: fetch favicon/logo automatically from base_url."
+      ],
+      "docsHref": "/docs/branding.md"
+    },
+    "memberships": {
+      "title": "Memberships",
+      "summary": "Referrer memberships created via invitation. Approval requires an approved payment method and generates referral codes.",
+      "actions": [
+        "Filter by status and business.",
+        "View detail (member, websites, payments, codes).",
+        "Approve, reject or suspend."
+      ],
+      "prerequisites": [
+        "Accepted invitation → pending membership.",
+        "Approved payment method before approval."
+      ]
+    },
+    "payment-methods": {
+      "title": "Payment methods",
+      "summary": "Versioned history (IBAN/MB Way). Approved, rejected, pending and superseded versions.",
+      "actions": [
+        "Filter by status.",
+        "Approve/reject pending ones.",
+        "Reveal payload with step-up (audited)."
+      ],
+      "pitfalls": [
+        "Reveal requires a recent password (step-up).",
+        "Superseded versions are read-only history."
+      ]
+    },
+    "integrations": {
+      "title": "Integrations",
+      "summary": "Bearer + HMAC credentials per business/website/source for ingesting external checkout events.",
+      "actions": [
+        "Create credential (stable source, e.g. node_checkout).",
+        "Rotate or revoke credentials.",
+        "Open the “How to integrate” guide."
+      ],
+      "prerequisites": [
+        "Existing business and website.",
+        "Unique source per business."
+      ],
+      "pitfalls": [
+        "Token and HMAC only appear on create/rotate.",
+        "Source is not a runtime: it is the channel identifier (idempotency)."
+      ],
+      "docsHref": "/docs/integrations/checkout.md"
+    },
+    "commission-rules": {
+      "title": "Commission rules",
+      "summary": "Versioned rules in basis points. Can be global to the business or scoped to a website.",
+      "actions": [
+        "Create rule (bps rate, optional website).",
+        "Deactivate an active rule.",
+        "View scope (business + website)."
+      ],
+      "docsHref": "/docs/attribution.md"
+    },
+    "invitations": {
+      "title": "Invitations",
+      "summary": "Invite referrers to a business with assigned websites. The plaintext token only appears on creation.",
+      "actions": [
+        "Create, revoke or resend invitations."
+      ]
+    },
+    "events": {
+      "title": "Commercial events",
+      "summary": "Normalised events (sale/refund/chargeback) ingested via integration. Statuses: received, attributed, ignored.",
+      "actions": [
+        "Browse events and ignore reasons."
+      ],
+      "docsHref": "/docs/attribution.md"
+    },
+    "payout-requests": {
+      "title": "Payouts",
+      "summary": "Referrer settlement requests. AACT records the external payment; it does not transfer money.",
+      "actions": [
+        "Approve, reject or mark as paid."
+      ]
+    }
+  },
+  "portal": {
+    "home": {
+      "title": "Referrer portal",
+      "summary": "Referrer area: memberships, payment method, documents, balances, payouts and referral codes.",
+      "actions": [
+        "Submit IBAN/MB Way.",
+        "Upload identity document.",
+        "Generate code link/QR.",
+        "Request payout when balance reaches the threshold."
+      ]
+    }
+  }
+}

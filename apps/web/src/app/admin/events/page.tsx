@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge, toneForStatus } from "@/components/ui/StatusBadge";
@@ -23,6 +24,9 @@ type EventRow = {
 
 export default function AdminEventsPage() {
   const router = useRouter();
+  const t = useTranslations("admin.events");
+  const tCommon = useTranslations("common");
+  const tEnums = useTranslations("enums.commercialEventStatus");
   const [events, setEvents] = useState<EventRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,18 +46,18 @@ export default function AdminEventsPage() {
       } catch (err) {
         const status = (err as { status?: number }).status;
         if (status === 401) router.replace("/login");
-        else setError(err instanceof Error ? err.message : "Sem acesso.");
+        else setError(err instanceof Error ? err.message : tCommon("noAccess"));
       } finally {
         setLoading(false);
       }
     })();
-  }, [router]);
+  }, [router, tCommon]);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Eventos comerciais"
-        description="Ingestão idempotente por (business, source, external_event_id)."
+        title={t("title")}
+        description={t("description")}
         helpKey="admin.events"
       />
 
@@ -64,11 +68,11 @@ export default function AdminEventsPage() {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-stone-500">A carregar…</p>
+        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
       ) : events.length === 0 && !error ? (
         <EmptyState
-          title="Sem eventos"
-          description="Eventos comerciais ingeridos via integração aparecem aqui."
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
         />
       ) : (
         <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
@@ -79,14 +83,24 @@ export default function AdminEventsPage() {
                   {event.external_event_id} · {event.source}
                 </p>
                 <StatusBadge tone={toneForStatus(event.status)}>
-                  {event.status}
+                  {tEnums.has(event.status)
+                    ? tEnums(event.status)
+                    : event.status}
                 </StatusBadge>
               </div>
               <p className="text-stone-500">
-                {event.event_type} · {event.amount_minor} {event.currency}
-                {event.referral_code ? ` · ref ${event.referral_code}` : ""}
+                {t("line", {
+                  eventType: event.event_type,
+                  amount: event.amount_minor,
+                  currency: event.currency,
+                })}
+                {event.referral_code
+                  ? t("withRef", { code: event.referral_code })
+                  : ""}
                 {event.commission
-                  ? ` · comissão ${event.commission.commission_minor}`
+                  ? t("withCommission", {
+                      amount: event.commission.commission_minor,
+                    })
                   : ""}
               </p>
               {event.status_reason ? (

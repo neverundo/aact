@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useTranslations } from "next-intl";
 
 /** Simple single-field form for drawer prompts (reject reason, password, reference). */
 export function PromptForm({
@@ -20,6 +21,7 @@ export function PromptForm({
   onSubmit: (value: string) => void | Promise<void>;
   onCancel: () => void;
 }) {
+  const t = useTranslations("common");
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function PromptForm({
     try {
       await onSubmit(value);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao submeter.");
+      setError(err instanceof Error ? err.message : t("submitFailed"));
     } finally {
       setLoading(false);
     }
@@ -62,14 +64,14 @@ export function PromptForm({
           disabled={loading}
           className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
         >
-          {loading ? "A processar…" : submitLabel}
+          {loading ? t("processing") : submitLabel}
         </button>
         <button
           type="button"
           className="min-h-11 rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
           onClick={onCancel}
         >
-          Cancelar
+          {t("cancel")}
         </button>
       </div>
     </form>

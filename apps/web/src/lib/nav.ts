@@ -15,99 +15,99 @@ export type NavIconName =
 
 export type NavItem = {
   href: string;
-  label: string;
-  /** Short label for collapsed rail */
-  shortLabel?: string;
+  labelKey: string;
+  /** Short label key for collapsed rail */
+  shortLabelKey?: string;
   icon: NavIconName;
 };
 
 export type NavGroup = {
   id: string;
-  label: string;
+  labelKey: string;
   items: NavItem[];
 };
 
 export const adminNav: NavGroup[] = [
   {
     id: "overview",
-    label: "Visão geral",
+    labelKey: "nav.groups.overview",
     items: [
       {
         href: "/admin",
-        label: "Dashboard",
-        shortLabel: "Home",
+        labelKey: "nav.admin.dashboard",
+        shortLabelKey: "nav.admin.dashboardShort",
         icon: "home",
       },
     ],
   },
   {
     id: "operations",
-    label: "Operações",
+    labelKey: "nav.groups.operations",
     items: [
       {
         href: "/admin/businesses",
-        label: "Businesses",
-        shortLabel: "Biz",
+        labelKey: "nav.admin.businesses",
+        shortLabelKey: "nav.admin.businessesShort",
         icon: "building",
       },
       {
         href: "/admin/events",
-        label: "Eventos",
-        shortLabel: "Evt",
+        labelKey: "nav.admin.events",
+        shortLabelKey: "nav.admin.eventsShort",
         icon: "calendar",
       },
       {
         href: "/admin/payout-requests",
-        label: "Payouts",
-        shortLabel: "Pay",
+        labelKey: "nav.admin.payouts",
+        shortLabelKey: "nav.admin.payoutsShort",
         icon: "money",
       },
     ],
   },
   {
     id: "people",
-    label: "Pessoas",
+    labelKey: "nav.groups.people",
     items: [
       {
         href: "/admin/invitations",
-        label: "Convites",
-        shortLabel: "Inv",
+        labelKey: "nav.admin.invitations",
+        shortLabelKey: "nav.admin.invitationsShort",
         icon: "envelope",
       },
       {
         href: "/admin/memberships",
-        label: "Memberships",
-        shortLabel: "Mem",
+        labelKey: "nav.admin.memberships",
+        shortLabelKey: "nav.admin.membershipsShort",
         icon: "users",
       },
       {
         href: "/admin/payment-methods",
-        label: "Métodos de pagamento",
-        shortLabel: "PM",
+        labelKey: "nav.admin.paymentMethods",
+        shortLabelKey: "nav.admin.paymentMethodsShort",
         icon: "creditCard",
       },
     ],
   },
   {
     id: "config",
-    label: "Configuração",
+    labelKey: "nav.groups.config",
     items: [
       {
         href: "/admin/integrations",
-        label: "Integrações",
-        shortLabel: "Int",
+        labelKey: "nav.admin.integrations",
+        shortLabelKey: "nav.admin.integrationsShort",
         icon: "plug",
       },
       {
         href: "/admin/commission-rules",
-        label: "Regras",
-        shortLabel: "Reg",
+        labelKey: "nav.admin.rules",
+        shortLabelKey: "nav.admin.rulesShort",
         icon: "percent",
       },
       {
         href: "/admin/security",
-        label: "Segurança",
-        shortLabel: "Sec",
+        labelKey: "nav.admin.security",
+        shortLabelKey: "nav.admin.securityShort",
         icon: "shield",
       },
     ],
@@ -117,78 +117,79 @@ export const adminNav: NavGroup[] = [
 export const portalNav: NavGroup[] = [
   {
     id: "portal",
-    label: "Portal",
+    labelKey: "nav.groups.portal",
     items: [
       {
         href: "/portal#memberships",
-        label: "Memberships",
-        shortLabel: "Mem",
+        labelKey: "nav.portal.memberships",
+        shortLabelKey: "nav.portal.membershipsShort",
         icon: "users",
       },
       {
         href: "/portal#pagamento",
-        label: "Pagamento",
-        shortLabel: "Pag",
+        labelKey: "nav.portal.payment",
+        shortLabelKey: "nav.portal.paymentShort",
         icon: "creditCard",
       },
       {
         href: "/portal#documentos",
-        label: "Documentos",
-        shortLabel: "Doc",
+        labelKey: "nav.portal.documents",
+        shortLabelKey: "nav.portal.documentsShort",
         icon: "file",
       },
       {
         href: "/portal#saldos",
-        label: "Saldos",
-        shortLabel: "Sal",
+        labelKey: "nav.portal.balances",
+        shortLabelKey: "nav.portal.balancesShort",
         icon: "wallet",
       },
       {
         href: "/portal#payouts",
-        label: "Payouts",
-        shortLabel: "Out",
+        labelKey: "nav.portal.payouts",
+        shortLabelKey: "nav.portal.payoutsShort",
         icon: "money",
       },
       {
         href: "/portal#referral",
-        label: "Referral",
-        shortLabel: "Ref",
+        labelKey: "nav.portal.referral",
+        shortLabelKey: "nav.portal.referralShort",
         icon: "link",
       },
     ],
   },
   {
     id: "account",
-    label: "Conta",
+    labelKey: "nav.groups.account",
     items: [
       {
         href: "/admin/security",
-        label: "Segurança",
-        shortLabel: "Sec",
+        labelKey: "nav.portal.security",
+        shortLabelKey: "nav.portal.securityShort",
         icon: "shield",
       },
     ],
   },
 ];
 
-const breadcrumbLabels: Record<string, string> = {
-  admin: "Admin",
-  portal: "Portal",
-  businesses: "Businesses",
-  branding: "Branding",
-  events: "Eventos",
-  "payout-requests": "Payouts",
-  invitations: "Convites",
-  memberships: "Memberships",
-  "payment-methods": "Métodos de pagamento",
-  integrations: "Integrações",
-  "commission-rules": "Regras",
-  security: "Segurança",
+const breadcrumbKeys: Record<string, string> = {
+  admin: "nav.breadcrumbs.admin",
+  portal: "nav.breadcrumbs.portal",
+  businesses: "nav.breadcrumbs.businesses",
+  branding: "nav.breadcrumbs.branding",
+  events: "nav.breadcrumbs.events",
+  "payout-requests": "nav.breadcrumbs.payoutRequests",
+  invitations: "nav.breadcrumbs.invitations",
+  memberships: "nav.breadcrumbs.memberships",
+  "payment-methods": "nav.breadcrumbs.paymentMethods",
+  integrations: "nav.breadcrumbs.integrations",
+  "commission-rules": "nav.breadcrumbs.commissionRules",
+  security: "nav.breadcrumbs.security",
 };
 
 export type BreadcrumbItem = {
   href: string;
-  label: string;
+  /** Message key (e.g. nav.breadcrumbs.admin) or raw segment fallback */
+  labelKey: string;
 };
 
 export function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
@@ -202,7 +203,7 @@ export function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
     acc += `/${segment}`;
     crumbs.push({
       href: acc,
-      label: breadcrumbLabels[segment] ?? segment,
+      labelKey: breadcrumbKeys[segment] ?? segment,
     });
   }
 

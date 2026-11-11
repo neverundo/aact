@@ -19,7 +19,8 @@ x-api-env: &api-env
   CACHE_STORE: redis
   QUEUE_CONNECTION: redis
   SESSION_DRIVER: redis
-  SESSION_DOMAIN: localhost
+  # Host-only cookies (no Domain=). Domain=localhost breaks sessions on 127.0.0.1.
+  SESSION_DOMAIN: ""
   SESSION_SECURE_COOKIE: "false"
   SANCTUM_STATEFUL_DOMAINS: localhost,localhost:${HTTP_PORT:-18080},127.0.0.1,127.0.0.1:${HTTP_PORT:-18080}
   MAIL_MAILER: smtp

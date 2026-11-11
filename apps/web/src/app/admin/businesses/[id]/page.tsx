@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { useShell } from "@/components/shell/ShellProvider";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -34,6 +35,10 @@ export default function AdminBusinessDetailPage() {
   const params = useParams<{ id: string }>();
   const businessId = Number(params.id);
   const { openDrawer, closeDrawer } = useShell();
+  const t = useTranslations("admin.businessDetail");
+  const tWebsites = useTranslations("admin.websites");
+  const tBranding = useTranslations("admin.branding");
+  const tCommon = useTranslations("common");
   const [business, setBusiness] = useState<Business | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -63,15 +68,15 @@ export default function AdminBusinessDetailPage() {
           return;
         }
         if (status === 404) {
-          setError("Business não encontrado.");
+          setError(t("notFound"));
         } else {
-          setError(err instanceof Error ? err.message : "Sem acesso.");
+          setError(err instanceof Error ? err.message : tCommon("noAccess"));
         }
       } finally {
         setLoading(false);
       }
     })();
-  }, [router, load]);
+  }, [router, load, t, tCommon]);
 
   async function saveBusiness(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -94,9 +99,9 @@ export default function AdminBusinessDetailPage() {
         },
       );
       setBusiness(response.data);
-      setMessage("Business atualizado.");
+      setMessage(t("updated"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao guardar.");
+      setError(err instanceof Error ? err.message : tCommon("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -106,12 +111,11 @@ export default function AdminBusinessDetailPage() {
     if (!business) return;
     openDrawer({
       id: "create-website",
-      title: "Adicionar website",
-      description:
-        "Cada website pode ter credenciais de integração e regras de comissão próprias.",
+      title: tWebsites("createDrawerTitle"),
+      description: tWebsites("createDrawerDescription"),
       content: (
         <WebsiteForm
-          submitLabel="Criar website"
+          submitLabel={tWebsites("createSubmit")}
           onSubmit={async (payload) => {
             await apiFetch("/api/v1/admin/websites", {
               method: "POST",
@@ -120,7 +124,7 @@ export default function AdminBusinessDetailPage() {
                 ...payload,
               }),
             });
-            setMessage("Website criado.");
+            setMessage(tWebsites("created"));
             setError(null);
             closeDrawer();
             await load();
@@ -134,17 +138,17 @@ export default function AdminBusinessDetailPage() {
   function openEditWebsiteDrawer(website: Website) {
     openDrawer({
       id: `edit-website-${website.id}`,
-      title: `Editar ${website.name}`,
+      title: tWebsites("editTitle", { name: website.name }),
       content: (
         <WebsiteForm
           initial={website}
-          submitLabel="Guardar"
+          submitLabel={tWebsites("saveSubmit")}
           onSubmit={async (payload) => {
             await apiFetch(`/api/v1/admin/websites/${website.id}`, {
               method: "PUT",
               body: JSON.stringify(payload),
             });
-            setMessage("Website atualizado.");
+            setMessage(tWebsites("updated"));
             setError(null);
             closeDrawer();
             await load();
@@ -156,31 +160,33 @@ export default function AdminBusinessDetailPage() {
   }
 
   async function deleteWebsite(website: Website) {
-    if (!window.confirm(`Remover website “${website.name}”?`)) return;
+    if (!window.confirm(tWebsites("confirmRemove", { name: website.name }))) {
+      return;
+    }
     setError(null);
     try {
       await apiFetch(`/api/v1/admin/websites/${website.id}`, {
         method: "DELETE",
       });
-      setMessage("Website removido.");
+      setMessage(tWebsites("removed"));
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao remover.");
+      setError(err instanceof Error ? err.message : tCommon("removeFailed"));
     }
   }
 
   if (loading) {
-    return <p className="text-sm text-stone-500">A carregar…</p>;
+    return <p className="text-sm text-stone-500">{tCommon("loading")}</p>;
   }
 
   if (!business) {
     return (
       <div className="space-y-4">
         <p className="text-sm text-red-700" role="alert">
-          {error ?? "Business não encontrado."}
+          {error ?? t("notFound")}
         </p>
         <Link href="/admin/businesses" className="text-sm underline">
-          Voltar à listagem
+          {t("backToList")}
         </Link>
       </div>
     );
@@ -190,14 +196,17 @@ export default function AdminBusinessDetailPage() {
     <div className="flex flex-col gap-8">
       <PageHeader
         title={business.name}
-        description={`${business.slug} · ${business.currency}`}
+        description={t("meta", {
+          code: business.slug,
+          title: business.currency,
+        })}
         helpKey="admin.business-detail"
         actions={
           <Link
             href="/admin/businesses"
             className="min-h-11 rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
           >
-            Voltar
+            {tCommon("back")}
           </Link>
         }
       />
@@ -211,11 +220,11 @@ export default function AdminBusinessDetailPage() {
 
       <section className="space-y-4" aria-labelledby="business-edit-heading">
         <h2 id="business-edit-heading" className="text-lg font-semibold">
-          Dados do business
+          {t("sectionTitle")}
         </h2>
         <form className="grid max-w-xl gap-3" onSubmit={saveBusiness}>
           <label className="flex flex-col gap-1 text-sm">
-            Nome
+            {t("name")}
             <input
               name="name"
               className="rounded-md border border-stone-300 px-3 py-2"
@@ -224,7 +233,7 @@ export default function AdminBusinessDetailPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Slug
+            {t("slug")}
             <input
               name="slug"
               className="rounded-md border border-stone-300 px-3 py-2"
@@ -233,7 +242,7 @@ export default function AdminBusinessDetailPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Moeda
+            {t("currency")}
             <input
               name="currency"
               className="rounded-md border border-stone-300 px-3 py-2 uppercase"
@@ -243,7 +252,7 @@ export default function AdminBusinessDetailPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Limiar de payout (minor units)
+            {t("payoutThreshold")}
             <input
               name="payout_threshold_minor"
               type="number"
@@ -259,14 +268,14 @@ export default function AdminBusinessDetailPage() {
               type="checkbox"
               defaultChecked={business.is_active}
             />
-            Ativo
+            {t("active")}
           </label>
           <button
             type="submit"
             disabled={saving}
             className="min-h-11 w-fit rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
           >
-            {saving ? "A guardar…" : "Guardar business"}
+            {saving ? tCommon("saving") : t("save")}
           </button>
         </form>
       </section>
@@ -274,103 +283,104 @@ export default function AdminBusinessDetailPage() {
       <section className="space-y-4" aria-labelledby="websites-heading">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="websites-heading" className="text-lg font-semibold">
-            Websites
+            {tWebsites("sectionTitle")}
           </h2>
           <button
             type="button"
             className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
             onClick={openCreateWebsiteDrawer}
           >
-            Adicionar website
+            {tWebsites("add")}
           </button>
         </div>
 
         {(business.websites?.length ?? 0) === 0 ? (
           <EmptyState
-            title="Sem websites"
-            description="Adicione um website para poder criar credenciais e regras de comissão por canal."
+            title={tWebsites("emptyTitle")}
+            description={tWebsites("emptyDescription")}
             action={
               <button
                 type="button"
                 className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
                 onClick={openCreateWebsiteDrawer}
               >
-                Adicionar website
+                {tWebsites("add")}
               </button>
             }
           />
         ) : (
           <ul className="divide-y divide-stone-200 border-y border-stone-200">
-            {business.websites?.map((website) => (
-              <li
-                key={website.id}
-                className="flex flex-wrap items-start justify-between gap-4 py-4"
-              >
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-stone-900">{website.name}</p>
-                    <StatusBadge
-                      tone={toneForStatus(
-                        website.is_active ? "ativo" : "inativo",
-                      )}
-                    >
-                      {website.is_active ? "ativo" : "inativo"}
-                    </StatusBadge>
+            {business.websites?.map((website) => {
+              const activeLabel = website.is_active
+                ? tCommon("active")
+                : tCommon("inactive");
+              return (
+                <li
+                  key={website.id}
+                  className="flex flex-wrap items-start justify-between gap-4 py-4"
+                >
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-stone-900">{website.name}</p>
+                      <StatusBadge tone={toneForStatus(activeLabel)}>
+                        {activeLabel}
+                      </StatusBadge>
+                    </div>
+                    <p className="text-sm text-stone-500">{website.base_url}</p>
+                    <div className="flex flex-wrap gap-2 pt-1 text-xs">
+                      <Link
+                        href={`/admin/integrations?business_id=${business.id}&website_id=${website.id}`}
+                        className="underline underline-offset-2"
+                      >
+                        {tWebsites("createCredential")}
+                      </Link>
+                      <Link
+                        href={`/admin/commission-rules?business_id=${business.id}&website_id=${website.id}`}
+                        className="underline underline-offset-2"
+                      >
+                        {tWebsites("createRule")}
+                      </Link>
+                      <Link
+                        href={`/admin/businesses/${business.id}/branding`}
+                        className="underline underline-offset-2"
+                      >
+                        {tWebsites("branding")}
+                      </Link>
+                    </div>
                   </div>
-                  <p className="text-sm text-stone-500">{website.base_url}</p>
-                  <div className="flex flex-wrap gap-2 pt-1 text-xs">
-                    <Link
-                      href={`/admin/integrations?business_id=${business.id}&website_id=${website.id}`}
-                      className="underline underline-offset-2"
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                      onClick={() => openEditWebsiteDrawer(website)}
                     >
-                      Criar credencial
-                    </Link>
-                    <Link
-                      href={`/admin/commission-rules?business_id=${business.id}&website_id=${website.id}`}
-                      className="underline underline-offset-2"
+                      {tCommon("edit")}
+                    </button>
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                      onClick={() => deleteWebsite(website)}
                     >
-                      Criar regra
-                    </Link>
-                    <Link
-                      href={`/admin/businesses/${business.id}/branding`}
-                      className="underline underline-offset-2"
-                    >
-                      Branding
-                    </Link>
+                      {tCommon("remove")}
+                    </button>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                    onClick={() => openEditWebsiteDrawer(website)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                    onClick={() => deleteWebsite(website)}
-                  >
-                    Remover
-                  </button>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Branding</h2>
+        <h2 className="text-lg font-semibold">{tBranding("sectionFromBusiness")}</h2>
         <p className="text-sm text-stone-600">
-          Configure cores e logotipo usados no portal do referrer.
+          {tBranding("sectionFromBusinessDescription")}
         </p>
         <Link
           href={`/admin/businesses/${business.id}/branding`}
           className="inline-flex min-h-11 items-center rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
         >
-          Abrir branding
+          {tBranding("open")}
         </Link>
       </section>
     </div>
@@ -392,6 +402,8 @@ function WebsiteForm({
   }) => Promise<void>;
   onError: (message: string) => void;
 }) {
+  const tWebsites = useTranslations("admin.websites");
+  const tCommon = useTranslations("common");
   const [name, setName] = useState(initial?.name ?? "");
   const [baseUrl, setBaseUrl] = useState(initial?.base_url ?? "https://");
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
@@ -405,7 +417,7 @@ function WebsiteForm({
     try {
       await onSubmit({ name, base_url: baseUrl, is_active: isActive });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Falha ao guardar.";
+      const msg = err instanceof Error ? err.message : tCommon("saveFailed");
       setLocalError(msg);
       onError(msg);
     } finally {
@@ -416,7 +428,7 @@ function WebsiteForm({
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       <label className="flex flex-col gap-1 text-sm">
-        Nome
+        {tWebsites("name")}
         <input
           className="rounded-md border border-stone-300 px-3 py-2"
           value={name}
@@ -425,7 +437,7 @@ function WebsiteForm({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        Base URL
+        {tWebsites("baseUrl")}
         <input
           type="url"
           className="rounded-md border border-stone-300 px-3 py-2"
@@ -440,7 +452,7 @@ function WebsiteForm({
           checked={isActive}
           onChange={(e) => setIsActive(e.target.checked)}
         />
-        Ativo
+        {tWebsites("active")}
       </label>
       {localError ? (
         <p className="text-sm text-red-700" role="alert">
@@ -452,7 +464,7 @@ function WebsiteForm({
         disabled={loading}
         className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
       >
-        {loading ? "A guardar…" : submitLabel}
+        {loading ? tCommon("saving") : submitLabel}
       </button>
     </form>
   );

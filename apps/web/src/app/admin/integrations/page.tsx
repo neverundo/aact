@@ -2,12 +2,14 @@
 
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { useShell } from "@/components/shell/ShellProvider";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import { fetchMe } from "@/lib/auth";
+import { formatDateTime, type AppLocale } from "@/lib/locale";
 
 type Business = { id: number; name: string };
 type Website = { id: number; name: string; business_id: number };
@@ -23,16 +25,19 @@ type Credential = {
   website?: { id: number; name: string };
 };
 
-const SOURCE_PRESETS = [
-  { value: "node_checkout", label: "node_checkout (ecommerce / Node)" },
-  { value: "demo_checkout", label: "demo_checkout (seed local)" },
-  { value: "offline_pos", label: "offline_pos (POS / till)" },
-  { value: "__custom", label: "Outro…" },
+const SOURCE_PRESET_VALUES = [
+  "node_checkout",
+  "demo_checkout",
+  "offline_pos",
+  "__custom",
 ] as const;
 
 export default function AdminIntegrationsPage() {
+  const tCommon = useTranslations("common");
   return (
-    <Suspense fallback={<p className="text-sm text-stone-500">A carregar…</p>}>
+    <Suspense
+      fallback={<p className="text-sm text-stone-500">{tCommon("loading")}</p>}
+    >
       <AdminIntegrationsInner />
     </Suspense>
   );
@@ -42,6 +47,9 @@ function AdminIntegrationsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { openDrawer, closeDrawer } = useShell();
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("admin.integrations");
+  const tCommon = useTranslations("common");
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [websites, setWebsites] = useState<Website[]>([]);
   const [items, setItems] = useState<Credential[]>([]);
@@ -85,7 +93,7 @@ function AdminIntegrationsInner() {
       } catch (err) {
         const status = (err as { status?: number }).status;
         if (status === 401) router.replace("/login");
-        else setError(err instanceof Error ? err.message : "Sem acesso.");
+        else setError(err instanceof Error ? err.message : tCommon("noAccess"));
       } finally {
         setLoading(false);
       }
@@ -97,9 +105,8 @@ function AdminIntegrationsInner() {
   function openCreateDrawer(businessId?: number, websiteId?: number) {
     openDrawer({
       id: "create-integration",
-      title: "Criar credencial",
-      description:
-        "Segredos bearer + HMAC só aparecem na criação. Guarde-os de imediato.",
+      title: t("createDrawerTitle"),
+      description: t("createDrawerDescription"),
       content: (
         <CreateIntegrationForm
           businesses={businesses}
@@ -109,7 +116,7 @@ function AdminIntegrationsInner() {
           onSuccess={async (nextSecrets) => {
             setSecrets(nextSecrets);
             setError(null);
-            setMessage("Credencial criada. Guarde os segredos abaixo.");
+            setMessage(t("created"));
             closeDrawer();
             await load();
           }}
@@ -127,15 +134,15 @@ function AdminIntegrationsInner() {
         hmac_secret: string;
       }>(`/api/v1/admin/integrations/${id}/rotate`, { method: "POST" });
       setSecrets({ token: response.token, hmac: response.hmac_secret });
-      setMessage("Credencial rodada. Guarde os novos segredos.");
+      setMessage(t("rotated"));
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao rodar.");
+      setError(err instanceof Error ? err.message : t("rotateFailed"));
     }
   }
 
   async function revoke(id: number) {
-    if (!window.confirm("Revogar esta credencial? Deixa de autenticar eventos.")) {
+    if (!window.confirm(t("confirmRevoke"))) {
       return;
     }
     setError(null);
@@ -143,18 +150,18 @@ function AdminIntegrationsInner() {
       await apiFetch(`/api/v1/admin/integrations/${id}/revoke`, {
         method: "POST",
       });
-      setMessage("Credencial revogada.");
+      setMessage(t("revoked"));
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao revogar.");
+      setError(err instanceof Error ? err.message : t("revokeFailed"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Integrações"
-        description="Credenciais bearer + HMAC por business/website/source para POST /api/v1/integration/events."
+        title={t("title")}
+        description={t("description")}
         helpKey="admin.integrations"
         actions={
           <div className="flex flex-wrap gap-2">
@@ -163,14 +170,14 @@ function AdminIntegrationsInner() {
               className="min-h-11 rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
               onClick={() => setShowGuide((v) => !v)}
             >
-              {showGuide ? "Ocultar guia" : "Como integrar"}
+              {showGuide ? t("hideGuide") : t("showGuide")}
             </button>
             <button
               type="button"
               className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
               onClick={() => openCreateDrawer()}
             >
-              Criar credencial
+              {t("create")}
             </button>
           </div>
         }
@@ -191,18 +198,18 @@ function AdminIntegrationsInner() {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-stone-500">A carregar…</p>
+        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
       ) : items.length === 0 && !error ? (
         <EmptyState
-          title="Sem integrações"
-          description="Crie uma credencial para ingestão HMAC a partir do checkout externo."
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
           action={
             <button
               type="button"
               className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
               onClick={() => openCreateDrawer()}
             >
-              Criar credencial
+              {t("create")}
             </button>
           }
         />
@@ -217,17 +224,27 @@ function AdminIntegrationsInner() {
                       {item.name} · {item.source}
                     </p>
                     <StatusBadge tone={item.revoked_at ? "danger" : "success"}>
-                      {item.revoked_at ? "revogada" : "ativa"}
+                      {item.revoked_at
+                        ? t("statusRevoked")
+                        : t("statusActive")}
                     </StatusBadge>
                   </div>
                   <p className="text-stone-500">
-                    {item.business?.name ?? `business #${item.business_id}`} ·{" "}
-                    {item.website?.name ?? `website #${item.website_id}`}
+                    {t("businessWebsite", {
+                      name:
+                        item.business?.name ??
+                        t("businessFallback", { id: item.business_id }),
+                      title:
+                        item.website?.name ??
+                        t("websiteFallback", { id: item.website_id }),
+                    })}
                   </p>
                   <p className="text-stone-500">
                     {item.last_used_at
-                      ? `último uso ${new Date(item.last_used_at).toLocaleString("pt-PT")}`
-                      : "ainda sem uso"}
+                      ? t("lastUsed", {
+                          date: formatDateTime(item.last_used_at, locale),
+                        })
+                      : t("neverUsed")}
                   </p>
                 </div>
                 {!item.revoked_at ? (
@@ -237,14 +254,14 @@ function AdminIntegrationsInner() {
                       className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
                       onClick={() => rotate(item.id)}
                     >
-                      Rodar
+                      {t("rotate")}
                     </button>
                     <button
                       type="button"
                       className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
                       onClick={() => revoke(item.id)}
                     >
-                      Revogar
+                      {t("revoke")}
                     </button>
                   </div>
                 ) : null}
@@ -258,41 +275,22 @@ function AdminIntegrationsInner() {
 }
 
 function IntegrationGuide() {
+  const t = useTranslations("admin.integrations");
   return (
     <section
       className="space-y-3 rounded-md border border-stone-200 bg-stone-50 p-4 text-sm text-stone-700"
       aria-labelledby="integration-guide-heading"
     >
       <h2 id="integration-guide-heading" className="font-semibold text-stone-900">
-        Como integrar um checkout externo
+        {t("guideTitle")}
       </h2>
       <ol className="list-decimal space-y-2 pl-5">
-        <li>
-          Crie uma credencial ligada ao website certo. O campo{" "}
-          <strong>source</strong> é um identificador estável do canal (ex.:{" "}
-          <code>node_checkout</code>) — não é um runtime especial. É usado na
-          unicidade da credencial e na idempotência dos eventos.
-        </li>
-        <li>
-          Guarde <code>token</code> e <code>hmac_secret</code> (mostrados uma
-          só vez).
-        </li>
-        <li>
-          No checkout, preserve o <code>?ref=CODE</code> da visita e envie{" "}
-          <code>referral_code</code> no evento <code>sale</code>.
-        </li>
-        <li>
-          Faça <code>POST /api/v1/integration/events</code> com headers{" "}
-          <code>Authorization: Bearer …</code>, <code>X-AACT-Timestamp</code>,{" "}
-          <code>X-AACT-Nonce</code> e <code>X-AACT-Signature</code> (HMAC sobre{" "}
-          <code>timestamp.nonce.rawBody</code>).
-        </li>
+        <li>{t("guideStep1")}</li>
+        <li>{t("guideStep2")}</li>
+        <li>{t("guideStep3")}</li>
+        <li>{t("guideStep4")}</li>
       </ol>
-      <p>
-        Exemplo pronto:{" "}
-        <code>examples/node-checkout/post-sale.mjs</code>. Documentação:{" "}
-        <code>docs/integrations/checkout.md</code>.
-      </p>
+      <p>{t("guideFooter")}</p>
     </section>
   );
 }
@@ -312,6 +310,8 @@ function CreateIntegrationForm({
   onSuccess: (secrets: { token: string; hmac: string }) => void | Promise<void>;
   onError: (message: string) => void;
 }) {
+  const t = useTranslations("admin.integrations");
+  const tCommon = useTranslations("common");
   const [businessId, setBusinessId] = useState<number | "">(
     initialBusinessId ?? "",
   );
@@ -328,6 +328,13 @@ function CreateIntegrationForm({
     () => (sourcePreset === "__custom" ? customSource : sourcePreset),
     [sourcePreset, customSource],
   );
+
+  const sourceLabels: Record<(typeof SOURCE_PRESET_VALUES)[number], string> = {
+    node_checkout: t("sourcePresetNode"),
+    demo_checkout: t("sourcePresetDemo"),
+    offline_pos: t("sourcePresetPos"),
+    __custom: t("sourcePresetOther"),
+  };
 
   async function onCreate(event: FormEvent) {
     event.preventDefault();
@@ -348,7 +355,7 @@ function CreateIntegrationForm({
       });
       await onSuccess({ token: response.token, hmac: response.hmac_secret });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Falha ao criar.";
+      const msg = err instanceof Error ? err.message : tCommon("createFailed");
       setLocalError(msg);
       onError(msg);
     } finally {
@@ -359,7 +366,7 @@ function CreateIntegrationForm({
   return (
     <form className="flex flex-col gap-3" onSubmit={onCreate}>
       <label className="flex flex-col gap-1 text-sm">
-        Business
+        {tCommon("business")}
         <select
           className="rounded-md border border-stone-300 px-3 py-2"
           value={businessId}
@@ -369,7 +376,7 @@ function CreateIntegrationForm({
           }}
           required
         >
-          <option value="">Selecionar…</option>
+          <option value="">{tCommon("selecting")}</option>
           {businesses.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
@@ -378,7 +385,7 @@ function CreateIntegrationForm({
         </select>
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        Website
+        {tCommon("website")}
         <select
           className="rounded-md border border-stone-300 px-3 py-2"
           value={websiteId}
@@ -387,7 +394,7 @@ function CreateIntegrationForm({
           }
           required
         >
-          <option value="">Selecionar…</option>
+          <option value="">{tCommon("selecting")}</option>
           {websites
             .filter((w) => businessId === "" || w.business_id === businessId)
             .map((w) => (
@@ -398,37 +405,34 @@ function CreateIntegrationForm({
         </select>
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        Source
+        {t("source")}
         <select
           className="rounded-md border border-stone-300 px-3 py-2"
           value={sourcePreset}
           onChange={(e) => setSourcePreset(e.target.value)}
         >
-          {SOURCE_PRESETS.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
+          {SOURCE_PRESET_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {sourceLabels[value]}
             </option>
           ))}
         </select>
       </label>
       {sourcePreset === "__custom" ? (
         <label className="flex flex-col gap-1 text-sm">
-          Source personalizado
+          {t("sourceCustom")}
           <input
             className="rounded-md border border-stone-300 px-3 py-2"
             value={customSource}
             onChange={(e) => setCustomSource(e.target.value)}
-            placeholder="ex.: shopify_webhook"
+            placeholder={t("sourceCustomPlaceholder")}
             required
           />
         </label>
       ) : null}
-      <p className="text-xs text-stone-500">
-        Source identifica o canal de origem. Deve ser único por business e entra
-        na chave de idempotência dos eventos.
-      </p>
+      <p className="text-xs text-stone-500">{t("sourceHint")}</p>
       <label className="flex flex-col gap-1 text-sm">
-        Nome
+        {t("name")}
         <input
           className="rounded-md border border-stone-300 px-3 py-2"
           value={name}
@@ -446,7 +450,7 @@ function CreateIntegrationForm({
         disabled={loading}
         className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
       >
-        {loading ? "A criar…" : "Criar credencial"}
+        {loading ? tCommon("creating") : t("create")}
       </button>
     </form>
   );

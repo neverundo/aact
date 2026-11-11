@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { PromptForm } from "@/components/shell/PromptForm";
 import { useShell } from "@/components/shell/ShellProvider";
@@ -34,6 +35,10 @@ type PayoutRequest = {
 export default function AdminPayoutRequestsPage() {
   const router = useRouter();
   const { openDrawer, closeDrawer } = useShell();
+  const t = useTranslations("admin.payoutRequests");
+  const tCommon = useTranslations("common");
+  const tStatus = useTranslations("enums.payoutRequestStatus");
+  const tPmType = useTranslations("enums.paymentMethodType");
   const [items, setItems] = useState<PayoutRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -61,12 +66,12 @@ export default function AdminPayoutRequestsPage() {
           router.replace("/login");
           return;
         }
-        setError(err instanceof Error ? err.message : "Sem acesso.");
+        setError(err instanceof Error ? err.message : tCommon("noAccess"));
       } finally {
         setLoading(false);
       }
     })();
-  }, [router]);
+  }, [router, tCommon]);
 
   async function approve(id: number) {
     setError(null);
@@ -75,28 +80,28 @@ export default function AdminPayoutRequestsPage() {
       await apiFetch(`/api/v1/admin/payout-requests/${id}/approve`, {
         method: "POST",
       });
-      setMessage(`Pedido #${id} aprovado.`);
+      setMessage(t("approved", { id }));
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao aprovar.");
+      setError(err instanceof Error ? err.message : t("approveFailed"));
     }
   }
 
   function openRejectDrawer(id: number) {
     openDrawer({
       id: `reject-payout-${id}`,
-      title: `Rejeitar pedido #${id}`,
+      title: t("rejectTitle", { id }),
       content: (
         <PromptForm
-          label="Motivo da rejeição"
-          submitLabel="Rejeitar"
+          label={t("rejectReason")}
+          submitLabel={tCommon("reject")}
           onCancel={closeDrawer}
           onSubmit={async (reason) => {
             await apiFetch(`/api/v1/admin/payout-requests/${id}/reject`, {
               method: "POST",
               body: JSON.stringify({ reason }),
             });
-            setMessage(`Pedido #${id} rejeitado.`);
+            setMessage(t("rejected", { id }));
             setError(null);
             closeDrawer();
             await load();
@@ -109,21 +114,20 @@ export default function AdminPayoutRequestsPage() {
   function openMarkPaidDrawer(id: number) {
     openDrawer({
       id: `mark-paid-${id}`,
-      title: `Marcar pedido #${id} como pago`,
-      description:
-        "Settlement só grava ledger — a plataforma não move dinheiro.",
+      title: t("markPaidTitle", { id }),
+      description: t("markPaidDescription"),
       content: (
         <PromptForm
-          label="Referência externa (ex. SEPA)"
-          submitLabel="Marcar pago"
-          placeholder="SEPA-…"
+          label={t("markPaidLabel")}
+          submitLabel={t("markPaidSubmit")}
+          placeholder={t("markPaidPlaceholder")}
           onCancel={closeDrawer}
           onSubmit={async (externalReference) => {
             await apiFetch(`/api/v1/admin/payout-requests/${id}/mark-paid`, {
               method: "POST",
               body: JSON.stringify({ external_reference: externalReference }),
             });
-            setMessage(`Pedido #${id} marcado como pago (ledger settlement).`);
+            setMessage(t("paid", { id }));
             setError(null);
             closeDrawer();
             await load();
@@ -136,8 +140,8 @@ export default function AdminPayoutRequestsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Pedidos de payout"
-        description="Aprovar, rejeitar ou marcar como pago após transferência externa."
+        title={t("title")}
+        description={t("description")}
         helpKey="admin.payout-requests"
       />
 
@@ -149,90 +153,108 @@ export default function AdminPayoutRequestsPage() {
       {message ? <p className="text-sm text-emerald-800">{message}</p> : null}
 
       {loading ? (
-        <p className="text-sm text-stone-500">A carregar…</p>
+        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
       ) : items.length === 0 && !error ? (
         <EmptyState
-          title="Sem pedidos"
-          description="Pedidos submetidos pelo portal do referrer aparecem aqui."
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
         />
       ) : (
         <ul className="divide-y divide-stone-200 border-y border-stone-200">
-          {items.map((item) => (
-            <li key={item.id} className="space-y-2 py-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-stone-900">
-                      #{item.id} · {item.amount_minor} {item.currency}
+          {items.map((item) => {
+            const statusLabel = tStatus.has(item.status)
+              ? tStatus(item.status)
+              : item.status;
+            const methodType = item.payment_method
+              ? tPmType.has(item.payment_method.method_type)
+                ? tPmType(item.payment_method.method_type)
+                : item.payment_method.method_type
+              : null;
+            return (
+              <li key={item.id} className="space-y-2 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-stone-900">
+                        {t("amountLine", {
+                          id: item.id,
+                          amount: item.amount_minor,
+                          code: item.currency,
+                        })}
+                      </p>
+                      <StatusBadge tone={toneForStatus(item.status)}>
+                        {statusLabel}
+                      </StatusBadge>
+                    </div>
+                    <p className="text-sm text-stone-600">
+                      {item.business?.name ??
+                        t("businessFallback", { id: item.business_id })}
+                      {item.payment_method && methodType
+                        ? ` · ${methodType} ${item.payment_method.display_mask}`
+                        : null}
                     </p>
-                    <StatusBadge tone={toneForStatus(item.status)}>
-                      {item.status}
-                    </StatusBadge>
+                    {item.status_reason ? (
+                      <p className="text-sm text-stone-500">
+                        {item.status_reason}
+                      </p>
+                    ) : null}
+                    {item.external_reference ? (
+                      <p className="font-mono text-xs text-stone-500">
+                        {item.external_reference}
+                      </p>
+                    ) : null}
+                    {(item.documents ?? []).length > 0 ? (
+                      <p className="text-xs text-stone-500">
+                        {t("documents", {
+                          documents: (item.documents ?? [])
+                            .map((d) => d.original_filename)
+                            .join(", "),
+                        })}
+                      </p>
+                    ) : null}
                   </div>
-                  <p className="text-sm text-stone-600">
-                    {item.business?.name ?? `business #${item.business_id}`}
-                    {item.payment_method
-                      ? ` · ${item.payment_method.method_type} ${item.payment_method.display_mask}`
-                      : null}
-                  </p>
-                  {item.status_reason ? (
-                    <p className="text-sm text-stone-500">{item.status_reason}</p>
-                  ) : null}
-                  {item.external_reference ? (
-                    <p className="font-mono text-xs text-stone-500">
-                      {item.external_reference}
-                    </p>
-                  ) : null}
-                  {(item.documents ?? []).length > 0 ? (
-                    <p className="text-xs text-stone-500">
-                      Docs:{" "}
-                      {(item.documents ?? [])
-                        .map((d) => d.original_filename)
-                        .join(", ")}
-                    </p>
-                  ) : null}
+                  <div className="flex shrink-0 flex-col gap-2">
+                    {item.status === "pending" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white hover:bg-stone-700"
+                          onClick={() => approve(item.id)}
+                        >
+                          {tCommon("approve")}
+                        </button>
+                        <button
+                          type="button"
+                          className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
+                          onClick={() => openRejectDrawer(item.id)}
+                        >
+                          {tCommon("reject")}
+                        </button>
+                      </>
+                    ) : null}
+                    {item.status === "approved" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white hover:bg-stone-700"
+                          onClick={() => openMarkPaidDrawer(item.id)}
+                        >
+                          {t("markPaidSubmit")}
+                        </button>
+                        <button
+                          type="button"
+                          className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
+                          onClick={() => openRejectDrawer(item.id)}
+                        >
+                          {tCommon("reject")}
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="flex shrink-0 flex-col gap-2">
-                  {item.status === "pending" ? (
-                    <>
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white hover:bg-stone-700"
-                        onClick={() => approve(item.id)}
-                      >
-                        Aprovar
-                      </button>
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
-                        onClick={() => openRejectDrawer(item.id)}
-                      >
-                        Rejeitar
-                      </button>
-                    </>
-                  ) : null}
-                  {item.status === "approved" ? (
-                    <>
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white hover:bg-stone-700"
-                        onClick={() => openMarkPaidDrawer(item.id)}
-                      >
-                        Marcar pago
-                      </button>
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
-                        onClick={() => openRejectDrawer(item.id)}
-                      >
-                        Rejeitar
-                      </button>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

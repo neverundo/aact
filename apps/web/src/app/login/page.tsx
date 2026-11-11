@@ -1,13 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { AuthShell } from "@/components/AuthShell";
 import { login } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useTranslations("auth");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export default function LoginPage() {
       router.push(result.user.is_admin ? "/admin" : "/portal");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Não foi possível autenticar.";
+        err instanceof Error ? err.message : t("authFailed");
       setError(message);
     } finally {
       setLoading(false);
@@ -50,16 +51,13 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell title="Iniciar sessão">
-      <p className="text-stone-600">
-        Autenticação por sessão segura (Sanctum). Credenciais nunca são
-        guardadas no browser.
-      </p>
+    <AuthShell title={t("loginTitle")}>
+      <p className="text-stone-600">{t("loginDescription")}</p>
 
       <form className="space-y-4" onSubmit={onSubmit} noValidate>
         <div className="space-y-2">
           <label className="block text-sm font-medium" htmlFor="email">
-            Email
+            {t("email")}
           </label>
           <input
             id="email"
@@ -74,7 +72,7 @@ export default function LoginPage() {
 
         <div className="space-y-2">
           <label className="block text-sm font-medium" htmlFor="password">
-            Palavra-passe
+            {t("password")}
           </label>
           <input
             id="password"
@@ -99,15 +97,9 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-700 disabled:opacity-60"
         >
-          {loading ? "A autenticar…" : "Continuar"}
+          {loading ? t("authenticating") : t("continue")}
         </button>
       </form>
-
-      <p className="text-sm text-stone-500">
-        <Link href="/" className="underline-offset-2 hover:underline">
-          Voltar ao início
-        </Link>
-      </p>
     </AuthShell>
   );
 }

@@ -35,11 +35,35 @@ export function isValidIban(iban: string): boolean {
   return mod97(numeric) === 1;
 }
 
+export type IbanMessageKey =
+  | "lettersNumbersOnly"
+  | "countryCode"
+  | "mustStartWithCountry"
+  | "checkDigits"
+  | "checkDigitsInvalid"
+  | "continueTyping"
+  | "tooLong"
+  | "invalid"
+  | "valid"
+  | "required";
+
 export type IbanLiveStatus =
   | { kind: "empty" }
-  | { kind: "incomplete"; message: string }
-  | { kind: "invalid"; message: string }
-  | { kind: "valid"; message: string };
+  | {
+      kind: "incomplete";
+      messageKey: IbanMessageKey;
+      values?: Record<string, string | number>;
+    }
+  | {
+      kind: "invalid";
+      messageKey: IbanMessageKey;
+      values?: Record<string, string | number>;
+    }
+  | {
+      kind: "valid";
+      messageKey: IbanMessageKey;
+      values?: Record<string, string | number>;
+    };
 
 export function liveValidateIban(iban: string): IbanLiveStatus {
   const trimmed = iban.trim();
@@ -50,58 +74,59 @@ export function liveValidateIban(iban: string): IbanLiveStatus {
   if (!/^[A-Z0-9]*$/.test(normalized)) {
     return {
       kind: "invalid",
-      message: "O IBAN só pode conter letras e números.",
+      messageKey: "lettersNumbersOnly",
     };
   }
 
   if (normalized.length < 2) {
     return {
       kind: "incomplete",
-      message: "Indique o código do país (2 letras).",
+      messageKey: "countryCode",
     };
   }
 
   if (!/^[A-Z]{2}/.test(normalized)) {
     return {
       kind: "invalid",
-      message: "O IBAN deve começar com 2 letras do país (ex. PT).",
+      messageKey: "mustStartWithCountry",
     };
   }
 
   if (normalized.length < 4) {
     return {
       kind: "incomplete",
-      message: "Indique os 2 dígitos de controlo após o país.",
+      messageKey: "checkDigits",
     };
   }
 
   if (!/^[A-Z]{2}[0-9]{2}/.test(normalized)) {
     return {
       kind: "invalid",
-      message: "Após o país devem seguir 2 dígitos de controlo.",
+      messageKey: "checkDigitsInvalid",
     };
   }
 
   if (normalized.length < 15) {
     return {
       kind: "incomplete",
-      message: `Continuar… (${normalized.length}/15+ caracteres)`,
+      messageKey: "continueTyping",
+      values: { length: normalized.length },
     };
   }
 
   if (normalized.length > 34) {
     return {
       kind: "invalid",
-      message: "O IBAN não pode ter mais de 34 caracteres.",
+      messageKey: "tooLong",
     };
   }
 
   if (!isValidIban(normalized)) {
     return {
       kind: "invalid",
-      message: "IBAN inválido (formato ou checksum).",
+      messageKey: "invalid",
     };
   }
 
-  return { kind: "valid", message: "IBAN válido." };
+  return { kind: "valid", messageKey: "valid" };
 }

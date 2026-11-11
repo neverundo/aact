@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { fetchMe } from "@/lib/auth";
+import { formatDateTime, type AppLocale } from "@/lib/locale";
 
 type Invitation = {
   uuid: string;
@@ -18,19 +20,12 @@ type Invitation = {
   expired: boolean;
 };
 
-function acceptSubmitLabel(
-  busy: boolean,
-  mode: "register" | "accept",
-): string {
-  if (busy) return "A processar…";
-  if (mode === "accept") return "Aceitar convite";
-  return "Criar conta e aceitar";
-}
-
 function InvitationAcceptForm() {
   const params = useParams<{ uuid: string }>();
   const search = useSearchParams();
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("portal.invitation");
   const token = search.get("token") ?? "";
 
   const [invitation, setInvitation] = useState<Invitation | null>(null);
@@ -68,7 +63,7 @@ function InvitationAcceptForm() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Convite indisponível.");
+          setError(err instanceof Error ? err.message : t("unavailable"));
         }
       }
     })();
@@ -76,9 +71,9 @@ function InvitationAcceptForm() {
     return () => {
       cancelled = true;
     };
-  }, [params.uuid, token]);
+  }, [params.uuid, token, t]);
 
-  const tokenError = token ? null : "Token de convite em falta.";
+  const tokenError = token ? null : t("missingToken");
   const visibleError = tokenError ?? error;
 
   async function onSubmit(event: FormEvent) {
@@ -106,11 +101,17 @@ function InvitationAcceptForm() {
       }
       router.replace("/portal");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao aceitar.");
+      setError(err instanceof Error ? err.message : t("acceptFailed"));
     } finally {
       setBusy(false);
     }
   }
+
+  const submitLabel = busy
+    ? t("processing")
+    : mode === "accept"
+      ? t("accept")
+      : t("registerAndAccept");
 
   return (
     <>
@@ -123,19 +124,20 @@ function InvitationAcceptForm() {
       {invitation ? (
         <section className="space-y-2 border-y border-stone-200 py-4 text-sm">
           <p>
-            <span className="text-stone-500">Business:</span>{" "}
+            <span className="text-stone-500">{t("business")}</span>{" "}
             {invitation.business.name}
           </p>
           <p>
-            <span className="text-stone-500">Email:</span> {invitation.email}
+            <span className="text-stone-500">{t("email")}</span>{" "}
+            {invitation.email}
           </p>
           <p>
-            <span className="text-stone-500">Websites:</span>{" "}
+            <span className="text-stone-500">{t("websites")}</span>{" "}
             {invitation.websites.map((w) => w.name).join(", ")}
           </p>
           <p>
-            <span className="text-stone-500">Expira:</span>{" "}
-            {new Date(invitation.expires_at).toLocaleString("pt-PT")}
+            <span className="text-stone-500">{t("expires")}</span>{" "}
+            {formatDateTime(invitation.expires_at, locale)}
           </p>
         </section>
       ) : null}
@@ -148,7 +150,7 @@ function InvitationAcceptForm() {
           {mode === "register" ? (
             <>
               <label className="flex flex-col gap-1 text-sm">
-                Nome{/* */}
+                {t("name")}
                 <input
                   className="rounded-md border border-stone-300 px-3 py-2"
                   value={name}
@@ -157,7 +159,7 @@ function InvitationAcceptForm() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                Password{/* */}
+                {t("password")}
                 <input
                   type="password"
                   className="rounded-md border border-stone-300 px-3 py-2"
@@ -168,7 +170,7 @@ function InvitationAcceptForm() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                Confirmar password{/* */}
+                {t("confirmPassword")}
                 <input
                   type="password"
                   className="rounded-md border border-stone-300 px-3 py-2"
@@ -180,9 +182,7 @@ function InvitationAcceptForm() {
               </label>
             </>
           ) : (
-            <p className="text-sm text-stone-600">
-              Sessão autenticada com o email do convite. Pode aceitar agora.
-            </p>
+            <p className="text-sm text-stone-600">{t("authenticatedHint")}</p>
           )}
 
           <button
@@ -190,7 +190,7 @@ function InvitationAcceptForm() {
             disabled={busy}
             className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
           >
-            {acceptSubmitLabel(busy, mode)}
+            {submitLabel}
           </button>
         </form>
       ) : null}
@@ -199,23 +199,22 @@ function InvitationAcceptForm() {
 }
 
 export default function InvitationAcceptPage() {
+  const t = useTranslations("portal.invitation");
+
   return (
     <main className="mx-auto flex min-h-full w-full max-w-xl flex-col gap-6 px-6 py-16">
       <p className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase">
-        /portal/invitations
+        {t("pathLabel")}
       </p>
-      <h1 className="text-3xl font-semibold tracking-tight">Aceitar convite</h1>
-      <p className="text-stone-600">
-        Pré-visualizar o convite não o consome. Só a submissão explícita cria a
-        membership pendente.
-      </p>
+      <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
+      <p className="text-stone-600">{t("description")}</p>
 
-      <Suspense fallback={<p className="text-stone-600">A carregar convite…</p>}>
+      <Suspense fallback={<p className="text-stone-600">{t("loading")}</p>}>
         <InvitationAcceptForm />
       </Suspense>
 
       <Link href="/login" className="text-sm underline-offset-2 hover:underline">
-        Ir para login
+        {t("goLogin")}
       </Link>
     </main>
   );

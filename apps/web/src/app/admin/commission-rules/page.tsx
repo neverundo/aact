@@ -2,6 +2,7 @@
 
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { useShell } from "@/components/shell/ShellProvider";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -27,8 +28,11 @@ type Rule = {
 };
 
 export default function AdminCommissionRulesPage() {
+  const tCommon = useTranslations("common");
   return (
-    <Suspense fallback={<p className="text-sm text-stone-500">A carregar…</p>}>
+    <Suspense
+      fallback={<p className="text-sm text-stone-500">{tCommon("loading")}</p>}
+    >
       <AdminCommissionRulesInner />
     </Suspense>
   );
@@ -38,6 +42,8 @@ function AdminCommissionRulesInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { openDrawer, closeDrawer } = useShell();
+  const t = useTranslations("admin.commissionRules");
+  const tCommon = useTranslations("common");
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [websites, setWebsites] = useState<Website[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
@@ -77,7 +83,7 @@ function AdminCommissionRulesInner() {
       } catch (err) {
         const status = (err as { status?: number }).status;
         if (status === 401) router.replace("/login");
-        else setError(err instanceof Error ? err.message : "Sem acesso.");
+        else setError(err instanceof Error ? err.message : tCommon("noAccess"));
       } finally {
         setLoading(false);
       }
@@ -88,8 +94,8 @@ function AdminCommissionRulesInner() {
   function openCreateDrawer(businessId?: number, websiteId?: number) {
     openDrawer({
       id: "create-rule",
-      title: "Criar regra",
-      description: "Valores em basis points (1000 = 10%).",
+      title: t("createDrawerTitle"),
+      description: t("createDrawerDescription"),
       content: (
         <CreateRuleForm
           businesses={businesses}
@@ -97,7 +103,7 @@ function AdminCommissionRulesInner() {
           initialBusinessId={businessId}
           initialWebsiteId={websiteId}
           onSuccess={async () => {
-            setMessage("Regra criada.");
+            setMessage(t("created"));
             setError(null);
             closeDrawer();
             await load();
@@ -109,24 +115,24 @@ function AdminCommissionRulesInner() {
   }
 
   async function deactivate(id: number) {
-    if (!window.confirm("Desativar esta regra?")) return;
+    if (!window.confirm(t("confirmDeactivate"))) return;
     setError(null);
     try {
       await apiFetch(`/api/v1/admin/commission-rules/${id}/deactivate`, {
         method: "POST",
       });
-      setMessage("Regra desativada.");
+      setMessage(t("deactivated"));
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao desativar.");
+      setError(err instanceof Error ? err.message : t("deactivateFailed"));
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Regras de comissão"
-        description="Valores em basis points (1000 = 10%). Precedência por prioridade e versão. O âmbito define website ou todo o business."
+        title={t("title")}
+        description={t("description")}
         helpKey="admin.commission-rules"
         actions={
           <button
@@ -134,7 +140,7 @@ function AdminCommissionRulesInner() {
             className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
             onClick={() => openCreateDrawer()}
           >
-            Criar regra
+            {t("create")}
           </button>
         }
       />
@@ -147,18 +153,18 @@ function AdminCommissionRulesInner() {
       {message ? <p className="text-sm text-emerald-800">{message}</p> : null}
 
       {loading ? (
-        <p className="text-sm text-stone-500">A carregar…</p>
+        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
       ) : rules.length === 0 && !error ? (
         <EmptyState
-          title="Sem regras"
-          description="Defina a primeira regra de comissão para o business."
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
           action={
             <button
               type="button"
               className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
               onClick={() => openCreateDrawer()}
             >
-              Criar regra
+              {t("create")}
             </button>
           }
         />
@@ -166,8 +172,11 @@ function AdminCommissionRulesInner() {
         <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
           {rules.map((rule) => {
             const scope = rule.website?.name
-              ? `website: ${rule.website.name}`
-              : "todo o business";
+              ? t("scopeWebsite", { name: rule.website.name })
+              : t("scopeBusiness");
+            const statusLabel = rule.is_active
+              ? t("statusActive")
+              : t("statusInactive");
             return (
               <li key={rule.id} className="space-y-2 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -177,19 +186,23 @@ function AdminCommissionRulesInner() {
                         {rule.name} · v{rule.version}
                       </p>
                       <StatusBadge tone={rule.is_active ? "success" : "danger"}>
-                        {rule.is_active ? "ativa" : "inativa"}
+                        {statusLabel}
                       </StatusBadge>
                     </div>
                     <p className="text-stone-500">
-                      {rule.business?.name ?? `business #${rule.business_id}`} ·{" "}
-                      {scope}
+                      {rule.business?.name ??
+                        t("businessFallback", { id: rule.business_id })}{" "}
+                      · {scope}
                     </p>
                     <p className="text-stone-500">
-                      {rule.event_type} · {rule.rate_bps} bps
-                      {rule.flat_minor
-                        ? ` + ${rule.flat_minor} flat`
-                        : ""}{" "}
-                      · prio {rule.priority}
+                      {t("details", {
+                        eventType: rule.event_type,
+                        amount: rule.rate_bps,
+                        flat: rule.flat_minor
+                          ? t("flatSuffix", { amount: rule.flat_minor })
+                          : "",
+                        count: rule.priority,
+                      })}
                     </p>
                   </div>
                   {rule.is_active ? (
@@ -198,7 +211,7 @@ function AdminCommissionRulesInner() {
                       className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
                       onClick={() => deactivate(rule.id)}
                     >
-                      Desativar
+                      {t("deactivate")}
                     </button>
                   ) : null}
                 </div>
@@ -226,6 +239,8 @@ function CreateRuleForm({
   onSuccess: () => void | Promise<void>;
   onError: (message: string) => void;
 }) {
+  const t = useTranslations("admin.commissionRules");
+  const tCommon = useTranslations("common");
   const [businessId, setBusinessId] = useState<number | "">(
     initialBusinessId ?? "",
   );
@@ -266,8 +281,7 @@ function CreateRuleForm({
       });
       await onSuccess();
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Falha ao criar regra.";
+      const msg = err instanceof Error ? err.message : t("createFailed");
       setLocalError(msg);
       onError(msg);
     } finally {
@@ -278,7 +292,7 @@ function CreateRuleForm({
   return (
     <form className="flex flex-col gap-3" onSubmit={onCreate}>
       <label className="flex flex-col gap-1 text-sm">
-        Business
+        {t("business")}
         <select
           className="rounded-md border border-stone-300 px-3 py-2"
           value={businessId}
@@ -288,7 +302,7 @@ function CreateRuleForm({
           }}
           required
         >
-          <option value="">Selecionar…</option>
+          <option value="">{tCommon("selecting")}</option>
           {businesses.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
@@ -297,7 +311,7 @@ function CreateRuleForm({
         </select>
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        Website (opcional)
+        {t("websiteOptional")}
         <select
           className="rounded-md border border-stone-300 px-3 py-2"
           value={websiteId}
@@ -305,7 +319,7 @@ function CreateRuleForm({
             setWebsiteId(e.target.value ? Number(e.target.value) : "")
           }
         >
-          <option value="">Todos do business</option>
+          <option value="">{t("allWebsites")}</option>
           {websites
             .filter((w) => businessId === "" || w.business_id === businessId)
             .map((w) => (
@@ -317,15 +331,13 @@ function CreateRuleForm({
       </label>
       {selectedBusiness ? (
         <p className="rounded-md bg-stone-100 px-3 py-2 text-xs text-stone-600">
-          Será aplicada em{" "}
           {selectedWebsite
-            ? `website “${selectedWebsite.name}”`
-            : `todo o business “${selectedBusiness.name}”`}
-          .
+            ? t("scopePreviewWebsite", { name: selectedWebsite.name })
+            : t("scopePreviewBusiness", { name: selectedBusiness.name })}
         </p>
       ) : null}
       <label className="flex flex-col gap-1 text-sm">
-        Nome
+        {t("name")}
         <input
           className="rounded-md border border-stone-300 px-3 py-2"
           value={name}
@@ -334,7 +346,7 @@ function CreateRuleForm({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        Taxa (bps)
+        {t("rateBps")}
         <input
           type="number"
           min={0}
@@ -355,7 +367,7 @@ function CreateRuleForm({
         disabled={loading}
         className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-60"
       >
-        {loading ? "A criar…" : "Criar regra"}
+        {loading ? tCommon("creating") : t("create")}
       </button>
     </form>
   );

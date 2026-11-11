@@ -1,42 +1,44 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export default function HomePage() {
+  const t = useTranslations("home");
+
   return (
     <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center gap-8 px-6 py-16">
       <div className="space-y-3">
         <p className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase">
-          AACT
+          {t("brand")}
         </p>
         <h1 className="text-4xl font-semibold tracking-tight text-stone-900">
-          AACommissionTool
+          {t("title")}
         </h1>
         <p className="text-lg font-semibold tracking-tight text-stone-900">
-          Agnostically-Assigning-a-Comission Tool
+          {t("tagline")}
         </p>
-        <p className="max-w-xl text-lg text-stone-600">
-          Plataforma self-hosted de atribuição e liquidação de comissões
-          (AACommissionTool).
-        </p>
+        <p className="max-w-xl text-lg text-stone-600">{t("description")}</p>
       </div>
 
-      <nav className="flex flex-wrap gap-3" aria-label="Áreas da aplicação">
+      <nav className="flex flex-wrap gap-3" aria-label={t("navLabel")}>
         <Link
           className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-700"
           href="/login"
         >
-          Iniciar sessão
+          {t("login")}
         </Link>
         <Link
           className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
           href="/admin"
         >
-          Administração
+          {t("admin")}
         </Link>
         <Link
           className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
           href="/portal"
         >
-          Portal do referrer
+          {t("portal")}
         </Link>
       </nav>
     </main>

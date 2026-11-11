@@ -21,7 +21,7 @@ Gateway: http://localhost:18080
 
 `platform` / `admin` go to `/login/mfa` after the password step — add `JBSWY3DPEHPK3PXP` to an authenticator (or use the E2E helper). `referrer` has no MFA.
 
-If login shows **Unauthenticated.** right after a re-seed, hard-refresh or clear site cookies for `localhost` and try again (fixed in current DemoSeeder + SoftAuthenticateSession).
+Use `http://localhost:18080` (or `http://127.0.0.1:18080`) consistently — session cookies are host-only. After a re-seed, login should work without clearing cookies (DemoSeeder avoids unnecessary password re-hash; SoftAuthenticateSession skips the stale password-hash gate on auth entrypoints).
 
 Also seeded: business `demo-business`, website `https://demo.example`, referral `REF-DEMOCODE01`, 10% sale rule, approved IBAN + clean document, payout threshold `1000` minor units, demo branding colors, and attribution outcomes:
 

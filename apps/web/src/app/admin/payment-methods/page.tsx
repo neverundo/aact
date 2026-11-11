@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { PromptForm } from "@/components/shell/PromptForm";
 import { useShell } from "@/components/shell/ShellProvider";
@@ -9,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge, toneForStatus } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import { fetchMe } from "@/lib/auth";
+import { formatDateTime, type AppLocale } from "@/lib/locale";
 
 type PaymentMethod = {
   id: number;
@@ -25,21 +27,34 @@ type PaymentMethod = {
 };
 
 const STATUS_FILTERS = [
-  { value: "pending_review", label: "Pendentes" },
-  { value: "approved", label: "Aprovados" },
-  { value: "rejected", label: "Recusados" },
-  { value: "superseded", label: "Substituídos" },
-  { value: "all", label: "Todos" },
+  "pending_review",
+  "approved",
+  "rejected",
+  "superseded",
+  "all",
 ] as const;
 
 export default function AdminPaymentMethodsPage() {
   const router = useRouter();
   const { openDrawer, closeDrawer } = useShell();
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("admin.paymentMethods");
+  const tCommon = useTranslations("common");
+  const tStatus = useTranslations("enums.paymentMethodStatus");
+  const tType = useTranslations("enums.paymentMethodType");
   const [items, setItems] = useState<PaymentMethod[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("pending_review");
   const [error, setError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Record<number, unknown>>({});
   const [loading, setLoading] = useState(true);
+
+  const filterLabels: Record<(typeof STATUS_FILTERS)[number], string> = {
+    pending_review: t("filterPending"),
+    approved: t("filterApproved"),
+    rejected: t("filterRejected"),
+    superseded: t("filterSuperseded"),
+    all: t("filterAll"),
+  };
 
   const load = useCallback(async () => {
     const params = new URLSearchParams();
@@ -65,12 +80,12 @@ export default function AdminPaymentMethodsPage() {
           router.replace("/login");
           return;
         }
-        setError(err instanceof Error ? err.message : "Sem acesso.");
+        setError(err instanceof Error ? err.message : tCommon("noAccess"));
       } finally {
         setLoading(false);
       }
     })();
-  }, [router, load]);
+  }, [router, load, tCommon]);
 
   async function review(id: number, status: "approved" | "rejected") {
     setError(null);
@@ -81,20 +96,19 @@ export default function AdminPaymentMethodsPage() {
       });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha na revisão.");
+      setError(err instanceof Error ? err.message : t("reviewFailed"));
     }
   }
 
   function openRevealDrawer(id: number) {
     openDrawer({
       id: `reveal-pm-${id}`,
-      title: "Step-up para revelar",
-      description:
-        "O payload completo exige reautenticação recente e fica auditado.",
+      title: t("revealTitle"),
+      description: t("revealDescription"),
       content: (
         <PromptForm
-          label="Palavra-passe"
-          submitLabel="Revelar"
+          label={t("password")}
+          submitLabel={t("revealSubmit")}
           inputType="password"
           onCancel={closeDrawer}
           onSubmit={async (password) => {
@@ -118,30 +132,30 @@ export default function AdminPaymentMethodsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Métodos de pagamento"
-        description="Histórico versionado por membership. A UI mostra máscaras; o payload completo só após step-up."
+        title={t("title")}
+        description={t("description")}
         helpKey="admin.payment-methods"
       />
 
       <div
         className="flex flex-wrap gap-2"
         role="tablist"
-        aria-label="Filtrar por estado"
+        aria-label={t("filterAria")}
       >
         {STATUS_FILTERS.map((filter) => (
           <button
-            key={filter.value}
+            key={filter}
             type="button"
             role="tab"
-            aria-selected={statusFilter === filter.value}
+            aria-selected={statusFilter === filter}
             className={`min-h-11 rounded-md border px-3 py-1.5 text-sm font-medium ${
-              statusFilter === filter.value
+              statusFilter === filter
                 ? "border-stone-900 bg-stone-900 text-white"
                 : "border-stone-300 hover:bg-stone-100"
             }`}
-            onClick={() => setStatusFilter(filter.value)}
+            onClick={() => setStatusFilter(filter)}
           >
-            {filter.label}
+            {filterLabels[filter]}
           </button>
         ))}
       </div>
@@ -153,82 +167,102 @@ export default function AdminPaymentMethodsPage() {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-stone-500">A carregar…</p>
+        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
       ) : items.length === 0 && !error ? (
         <EmptyState
-          title="Sem métodos neste filtro"
-          description="Altere o filtro ou aguarde submissões do portal."
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
         />
       ) : (
         <ul className="divide-y divide-stone-200 border-y border-stone-200">
-          {items.map((item) => (
-            <li key={item.id} className="space-y-2 py-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-stone-900">
-                      {item.user?.name ?? item.user?.email ?? `#${item.id}`} ·{" "}
-                      {item.method_type} · v{item.version}
+          {items.map((item) => {
+            const methodType = tType.has(item.method_type)
+              ? tType(item.method_type)
+              : item.method_type;
+            const statusLabel = tStatus.has(item.status)
+              ? tStatus(item.status)
+              : item.status;
+            return (
+              <li key={item.id} className="space-y-2 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-stone-900">
+                        {t("itemTitle", {
+                          name:
+                            item.user?.name ??
+                            item.user?.email ??
+                            `#${item.id}`,
+                          code: methodType,
+                          count: item.version,
+                        })}
+                      </p>
+                      <StatusBadge tone={toneForStatus(item.status)}>
+                        {statusLabel}
+                      </StatusBadge>
+                    </div>
+                    <p className="text-sm text-stone-500">
+                      {item.user?.email ?? tCommon("noEmail")} ·{" "}
+                      {item.business?.name ?? tCommon("none")}
                     </p>
-                    <StatusBadge tone={toneForStatus(item.status)}>
-                      {item.status}
-                    </StatusBadge>
+                    <p className="font-mono text-sm text-stone-600">
+                      {item.display_mask}
+                    </p>
+                    {item.reviewed_at ? (
+                      <p className="text-xs text-stone-500">
+                        {item.review_notes
+                          ? t("reviewedNotes", {
+                              date: formatDateTime(item.reviewed_at, locale),
+                              title: item.review_notes,
+                            })
+                          : tCommon("reviewedAt", {
+                              date: formatDateTime(item.reviewed_at, locale),
+                            })}
+                      </p>
+                    ) : item.created_at ? (
+                      <p className="text-xs text-stone-500">
+                        {tCommon("createdAt", {
+                          date: formatDateTime(item.created_at, locale),
+                        })}
+                      </p>
+                    ) : null}
+                    {revealed[item.id] ? (
+                      <pre className="mt-2 overflow-x-auto rounded bg-stone-100 p-2 text-xs">
+                        {JSON.stringify(revealed[item.id], null, 2)}
+                      </pre>
+                    ) : null}
                   </div>
-                  <p className="text-sm text-stone-500">
-                    {item.user?.email ?? "sem email"} ·{" "}
-                    {item.business?.name ?? "—"}
-                  </p>
-                  <p className="font-mono text-sm text-stone-600">
-                    {item.display_mask}
-                  </p>
-                  {item.reviewed_at ? (
-                    <p className="text-xs text-stone-500">
-                      revisto{" "}
-                      {new Date(item.reviewed_at).toLocaleString("pt-PT")}
-                      {item.review_notes ? ` · ${item.review_notes}` : ""}
-                    </p>
-                  ) : item.created_at ? (
-                    <p className="text-xs text-stone-500">
-                      criado{" "}
-                      {new Date(item.created_at).toLocaleString("pt-PT")}
-                    </p>
-                  ) : null}
-                  {revealed[item.id] ? (
-                    <pre className="mt-2 overflow-x-auto rounded bg-stone-100 p-2 text-xs">
-                      {JSON.stringify(revealed[item.id], null, 2)}
-                    </pre>
-                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    {item.status === "pending_review" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-700"
+                          onClick={() => review(item.id, "approved")}
+                        >
+                          {tCommon("approve")}
+                        </button>
+                        <button
+                          type="button"
+                          className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                          onClick={() => review(item.id, "rejected")}
+                        >
+                          {tCommon("reject")}
+                        </button>
+                      </>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                      onClick={() => openRevealDrawer(item.id)}
+                    >
+                      {tCommon("reveal")}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {item.status === "pending_review" ? (
-                    <>
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-700"
-                        onClick={() => review(item.id, "approved")}
-                      >
-                        Aprovar
-                      </button>
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                        onClick={() => review(item.id, "rejected")}
-                      >
-                        Rejeitar
-                      </button>
-                    </>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                    onClick={() => openRevealDrawer(item.id)}
-                  >
-                    Reveal
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

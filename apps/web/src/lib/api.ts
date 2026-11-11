@@ -1,6 +1,9 @@
+import { getAppLocale } from "./locale";
+
 export type ApiError = {
   message?: string;
   code?: string;
+  params?: Record<string, string | number>;
   errors?: Record<string, string[]>;
 };
 
@@ -34,6 +37,10 @@ export async function apiFetch<T>(
     headers.set("Accept", "application/json");
   }
 
+  if (!headers.has("Accept-Language")) {
+    headers.set("Accept-Language", getAppLocale());
+  }
+
   if (method !== "GET" && method !== "HEAD") {
     await ensureCsrfCookie();
     const xsrf = readCookie("XSRF-TOKEN");
@@ -62,7 +69,9 @@ export async function apiFetch<T>(
   const payload = (await response.json().catch(() => ({}))) as T & ApiError;
 
   if (!response.ok) {
-    const error = new Error(payload.message ?? "Pedido falhou") as Error & {
+    const fallback =
+      getAppLocale() === "en" ? "Request failed" : "Pedido falhou";
+    const error = new Error(payload.message ?? fallback) as Error & {
       status: number;
       payload: ApiError;
     };

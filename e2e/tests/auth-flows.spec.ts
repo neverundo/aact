@@ -31,7 +31,14 @@ test.describe("authenticated flows", () => {
 
     await expect(page).toHaveURL(/\/admin/, { timeout: 15_000 });
     await expect(page.getByRole("heading", { name: /área administrativa/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /payouts/i })).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("link", { name: /payouts/i }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: /menu da conta|account menu/i }).click();
+    await expect(
+      page.getByRole("group", { name: /escolher idioma|choose language/i }),
+    ).toBeVisible();
   });
 
   test("referrer logs in and sees portal + referral code", async ({ page }) => {
@@ -41,6 +48,8 @@ test.describe("authenticated flows", () => {
     await expect(page).toHaveURL(/\/portal/, { timeout: 15_000 });
     await expect(page.getByRole("heading", { name: /portal do referrer/i })).toBeVisible();
     await expect(page.getByText("REF-DEMOCODE01")).toBeVisible();
-    await expect(page.getByRole("heading", { name: /pedido de payout/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /pedidos? de payout/i }),
+    ).toBeVisible();
   });
 });

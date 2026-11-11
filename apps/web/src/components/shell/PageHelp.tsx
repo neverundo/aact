@@ -1,54 +1,82 @@
 "use client";
 
-import { getHelp, type HelpKey } from "@/content/help";
+import { useMessages, useTranslations } from "next-intl";
+import type { HelpKey } from "@/content/help";
+import type { HelpContent } from "@/content/help/types";
 import { useShell } from "./ShellProvider";
+
+function resolveHelp(
+  catalog: Record<string, unknown> | undefined,
+  helpKey: HelpKey,
+): HelpContent | undefined {
+  if (!catalog) return undefined;
+  const [ns, ...rest] = helpKey.split(".");
+  const leaf = rest.join(".");
+  const group = catalog[ns];
+  if (!group || typeof group !== "object") return undefined;
+  const content = (group as Record<string, unknown>)[leaf];
+  if (!content || typeof content !== "object") return undefined;
+  return content as HelpContent;
+}
 
 export function PageHelpButton({ helpKey }: { helpKey: HelpKey }) {
   const { openDrawer, closeDrawer } = useShell();
-  const help = getHelp(helpKey);
+  const t = useTranslations("common");
+  const messages = useMessages();
+  const help = resolveHelp(
+    messages.help as Record<string, unknown> | undefined,
+    helpKey,
+  );
+
+  if (!help) {
+    return null;
+  }
+
+  const content = help;
 
   function openHelp() {
     openDrawer({
       id: `help-${helpKey}`,
-      title: `Ajuda · ${help.title}`,
-      description: help.summary,
+      title: t("helpTitle", { title: content.title }),
+      description: content.summary,
       content: (
         <div className="space-y-4 text-sm text-stone-700">
           <section className="space-y-2">
-            <h3 className="font-medium text-stone-900">Ações neste ecrã</h3>
+            <h3 className="font-medium text-stone-900">{t("helpActions")}</h3>
             <ul className="list-disc space-y-1 pl-5">
-              {help.actions.map((item) => (
+              {content.actions.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
           </section>
 
-          {help.prerequisites?.length ? (
+          {content.prerequisites?.length ? (
             <section className="space-y-2">
-              <h3 className="font-medium text-stone-900">Pré-requisitos</h3>
+              <h3 className="font-medium text-stone-900">
+                {t("helpPrerequisites")}
+              </h3>
               <ul className="list-disc space-y-1 pl-5">
-                {help.prerequisites.map((item) => (
+                {content.prerequisites.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             </section>
           ) : null}
 
-          {help.pitfalls?.length ? (
+          {content.pitfalls?.length ? (
             <section className="space-y-2">
-              <h3 className="font-medium text-stone-900">Atenção</h3>
+              <h3 className="font-medium text-stone-900">{t("helpPitfalls")}</h3>
               <ul className="list-disc space-y-1 pl-5">
-                {help.pitfalls.map((item) => (
+                {content.pitfalls.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             </section>
           ) : null}
 
-          {help.docsHref ? (
+          {content.docsHref ? (
             <p className="text-xs text-stone-500">
-              Documentação completa no repositório:{" "}
-              <code className="rounded bg-stone-100 px-1">{help.docsHref}</code>
+              {t("helpDocs", { path: content.docsHref })}
             </p>
           ) : null}
 
@@ -57,7 +85,7 @@ export function PageHelpButton({ helpKey }: { helpKey: HelpKey }) {
             className="min-h-11 w-full rounded-md border border-stone-300 px-3 py-2 text-sm font-medium hover:bg-stone-100"
             onClick={closeDrawer}
           >
-            Fechar
+            {t("close")}
           </button>
         </div>
       ),
@@ -71,7 +99,7 @@ export function PageHelpButton({ helpKey }: { helpKey: HelpKey }) {
       onClick={openHelp}
       aria-haspopup="dialog"
     >
-      Ajuda
+      {t("help")}
     </button>
   );
 }

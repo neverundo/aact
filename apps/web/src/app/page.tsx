@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { AactLogo } from "@/components/AactLogo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   normalizeLocale,
@@ -26,18 +27,24 @@ export default function HomePage() {
     <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center gap-8 px-6 py-16">
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
-          <p className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase">
-            {t("brand")}
-          </p>
+          <div className="flex min-w-0 items-center gap-3">
+            <AactLogo className="h-14 w-14 sm:h-16 sm:w-16" />
+            <div className="min-w-0 space-y-1">
+              <p className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase">
+                {t("brand")}
+              </p>
+              <h1 className="text-4xl font-semibold tracking-tight text-stone-900">
+                {t("title")}
+              </h1>
+            </div>
+          </div>
           <LanguageSwitcher
             locale={normalizeLocale(locale)}
             onChange={onLocaleChange}
             ariaLabel={tAccount("languageSwitcher")}
           />
         </div>
-        <h1 className="text-4xl font-semibold tracking-tight text-stone-900">
-          {t("title")}
-        </h1>
+
         <p className="text-lg font-semibold tracking-tight text-stone-900">
           {t("tagline")}
         </p>

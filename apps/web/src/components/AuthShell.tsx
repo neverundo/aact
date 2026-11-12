@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { AactLogo } from "@/components/AactLogo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLoginLocale } from "@/components/LoginLocaleProvider";
 
@@ -21,16 +22,19 @@ export function AuthShell({
 
   return (
     <main className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center gap-8 px-6 py-16">
-      <div className="space-y-2">
-        <Link
-          href="/"
-          className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase"
-        >
-          AACT
-        </Link>
-        <h1 className="text-3xl font-semibold tracking-tight text-stone-900">
-          {title}
-        </h1>
+      <div className="flex items-center gap-3">
+        <AactLogo className="h-16 w-16" />
+        <div className="min-w-0 space-y-1">
+          <Link
+            href="/"
+            className="text-sm font-medium tracking-[0.2em] text-stone-500 uppercase"
+          >
+            AACT
+          </Link>
+          <h1 className="text-3xl font-semibold tracking-tight text-stone-900">
+            {title}
+          </h1>
+        </div>
       </div>
       {children}
       <div className="flex items-center justify-between gap-4 text-sm text-stone-500">

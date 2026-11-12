@@ -80,10 +80,10 @@ export function Sidebar({
       >
         <div
           className={[
-            "flex shrink-0 items-center border-b border-stone-200",
+            "flex h-14 shrink-0 items-center border-b border-stone-200",
             railMode
-              ? "h-14 justify-center gap-0 px-1"
-              : "justify-between gap-1 px-3 py-2.5",
+              ? "justify-center gap-0 px-1"
+              : "justify-between gap-1 px-3",
           ].join(" ")}
         >
           <Link
@@ -139,7 +139,7 @@ export function Sidebar({
           {!railMode ? (
             <button
               type="button"
-              className="hidden min-h-11 min-w-11 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 lg:inline-flex"
+              className="hidden h-9 w-9 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 lg:inline-flex"
               aria-label={t("collapseSidebar")}
               aria-expanded={!collapsed}
               aria-controls="app-sidebar"
@@ -150,7 +150,7 @@ export function Sidebar({
           ) : null}
           <button
             type="button"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 lg:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 lg:hidden"
             aria-label={t("closeMenu")}
             onClick={() => setMobileOpen(false)}
           >

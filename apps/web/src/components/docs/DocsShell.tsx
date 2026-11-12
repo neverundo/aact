@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { AactLogo } from "@/components/AactLogo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   normalizeLocale,
@@ -41,9 +42,10 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             </button>
             <Link
               href="/docs"
-              className="text-sm font-semibold tracking-[0.18em] text-stone-800 uppercase"
+              className="inline-flex items-center gap-2.5 text-sm font-semibold tracking-[0.18em] text-stone-800 uppercase"
             >
-              {t("brand")}
+              <AactLogo className="h-8 w-8" />
+              <span>{t("brand")}</span>
             </Link>
           </div>
           <div className="flex items-center gap-3">

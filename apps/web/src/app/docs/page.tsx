@@ -1,15 +1,18 @@
-"use client";
+import type { Metadata } from "next";
+import { DocsPageView } from "@/components/docs/DocsPageView";
+import { getOverviewPage } from "@/content/docs/pages/overview";
+import { normalizeLocale } from "@/lib/locale";
+import { getLocale } from "next-intl/server";
 
-import { useTranslations } from "next-intl";
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = normalizeLocale(await getLocale());
+  const page = getOverviewPage(locale);
+  return {
+    title: page.title,
+    description: page.description,
+  };
+}
 
-export default function DocsPage() {
-  const t = useTranslations("docs");
-
-  return (
-    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center gap-8 px-6 py-16">
-      <h1 className="text-4xl font-semibold tracking-tight text-stone-900">
-        {t("title")}
-      </h1>
-    </main>
-  );
+export default function DocsOverviewPage() {
+  return <DocsPageView slug="/docs" />;
 }

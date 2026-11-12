@@ -46,3 +46,22 @@ apps/web/coverage/
 
 # Docker
 *.log
+
+.cursor/
+.claude/
+.aider*
+.continue/
+.windsurf/
+.codeium/
+.roo/
+.roomodes
+.agent/
+.agents/
+.augment/
+.opencode/
+.gemini/
+.crush/
+.codex/
+.factory/
+.pi/
+

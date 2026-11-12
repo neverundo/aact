@@ -53,11 +53,11 @@ class PayoutRequestService
 
         return DB::transaction(function () use ($user, $membership, $documentUuids, $amountMinor, $threshold, $request) {
             $locked = BusinessMembership::query()->whereKey($membership->id)->lockForUpdate()->firstOrFail();
-            $payable = $this->ledger->payableBalanceMinor($locked);
+            $available = $this->ledger->availableBalanceMinor($locked);
 
-            if ($payable < $threshold) {
+            if ($available < $threshold) {
                 throw ValidationException::withMessages([
-                    'balance' => ["Payable balance {$payable} is below threshold {$threshold}."],
+                    'balance' => ["Available balance {$available} is below threshold {$threshold}."],
                 ]);
             }
 
@@ -101,10 +101,10 @@ class PayoutRequestService
                 ]);
             }
 
-            $requestAmount = $amountMinor ?? $payable;
-            if ($requestAmount < $threshold || $requestAmount > $payable) {
+            $requestAmount = $amountMinor ?? $available;
+            if ($requestAmount < $threshold || $requestAmount > $available) {
                 throw ValidationException::withMessages([
-                    'amount_minor' => ["Amount must be between threshold ({$threshold}) and payable ({$payable})."],
+                    'amount_minor' => ["Amount must be between threshold ({$threshold}) and available ({$available})."],
                 ]);
             }
 
@@ -135,28 +135,44 @@ class PayoutRequestService
 
     public function approve(User $actor, PayoutRequest $payout, Request $request): PayoutRequest
     {
-        if ($payout->status !== PayoutRequestStatus::Pending) {
-            throw ValidationException::withMessages([
-                'status' => ['Only pending payout requests can be approved.'],
-            ]);
-        }
+        return DB::transaction(function () use ($actor, $payout, $request) {
+            $locked = PayoutRequest::query()->whereKey($payout->id)->lockForUpdate()->firstOrFail();
 
-        $payout->forceFill([
-            'status' => PayoutRequestStatus::Approved,
-            'reviewed_by_user_id' => $actor->id,
-            'reviewed_at' => now(),
-            'status_reason' => null,
-        ])->save();
+            if ($locked->status !== PayoutRequestStatus::Pending) {
+                throw ValidationException::withMessages([
+                    'status' => ['Only pending payout requests can be approved.'],
+                ]);
+            }
 
-        $this->audit->log(
-            action: 'payout_request.approved',
-            actor: $actor,
-            businessId: $payout->business_id,
-            entity: new AuditEntity(PayoutRequest::class, $payout->id),
-            request: $request,
-        );
+            $membership = BusinessMembership::query()
+                ->whereKey($locked->business_membership_id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        return $payout->fresh();
+            $payable = $this->ledger->payableBalanceMinor($membership);
+            if ($payable < $locked->amount_minor) {
+                throw ValidationException::withMessages([
+                    'balance' => ['Payable balance is insufficient to approve this payout.'],
+                ]);
+            }
+
+            $locked->forceFill([
+                'status' => PayoutRequestStatus::Approved,
+                'reviewed_by_user_id' => $actor->id,
+                'reviewed_at' => now(),
+                'status_reason' => null,
+            ])->save();
+
+            $this->audit->log(
+                action: 'payout_request.approved',
+                actor: $actor,
+                businessId: $locked->business_id,
+                entity: new AuditEntity(PayoutRequest::class, $locked->id),
+                request: $request,
+            );
+
+            return $locked->fresh();
+        });
     }
 
     public function reject(User $actor, PayoutRequest $payout, string $reason, Request $request): PayoutRequest

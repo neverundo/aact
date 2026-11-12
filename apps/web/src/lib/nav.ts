@@ -162,7 +162,7 @@ export const portalNav: NavGroup[] = [
     labelKey: "nav.groups.account",
     items: [
       {
-        href: "/admin/security",
+        href: "/portal/security",
         labelKey: "nav.portal.security",
         shortLabelKey: "nav.portal.securityShort",
         icon: "shield",

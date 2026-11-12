@@ -144,6 +144,7 @@ class RefundAndPayoutTest extends TestCase
         ]);
 
         $this->actingAs($referrer);
+        AuthSession::markFullyAuthenticated();
         $create = $this->asSpa()->postJson('/api/v1/portal/payout-requests', [
             'membership_id' => $membership->id,
             'document_uuids' => [$document->uuid],
@@ -152,6 +153,14 @@ class RefundAndPayoutTest extends TestCase
 
         $payoutId = $create->json('data.id');
 
+        $this->actingAs($referrer);
+        AuthSession::markFullyAuthenticated();
+        $this->asSpa()->getJson('/api/v1/portal/balances')
+            ->assertOk()
+            ->assertJsonPath('data.0.payable_minor', 1000)
+            ->assertJsonPath('data.0.reserved_minor', 1000)
+            ->assertJsonPath('data.0.available_minor', 0);
+
         $admin = User::query()->whereHas('memberships', function ($q) use ($membership): void {
             $q->where('business_id', $membership->business_id)
                 ->where('role', MembershipRole::BusinessAdmin);
@@ -159,6 +168,7 @@ class RefundAndPayoutTest extends TestCase
 
         $this->actingAs($admin);
         AuthSession::markFullyAuthenticated();
+        AuthSession::markStepUp();
 
         $this->asSpa()->postJson('/api/v1/admin/payout-requests/'.$payoutId.'/approve')
             ->assertOk()
@@ -172,9 +182,12 @@ class RefundAndPayoutTest extends TestCase
         $this->assertTrue(LedgerEntry::query()->where('entry_type', 'payout_settlement')->exists());
 
         $this->actingAs($referrer);
+        AuthSession::markFullyAuthenticated();
         $this->asSpa()->getJson('/api/v1/portal/balances')
             ->assertOk()
-            ->assertJsonPath('data.0.payable_minor', 0);
+            ->assertJsonPath('data.0.payable_minor', 0)
+            ->assertJsonPath('data.0.reserved_minor', 0)
+            ->assertJsonPath('data.0.available_minor', 0);
 
         foreach (LedgerEntry::query()->with('lines')->get() as $entry) {
             $this->assertTrue($entry->isBalanced());
@@ -212,10 +225,155 @@ class RefundAndPayoutTest extends TestCase
         ]);
 
         $this->actingAs($referrer);
+        AuthSession::markFullyAuthenticated();
         $this->asSpa()->postJson('/api/v1/portal/payout-requests', [
             'membership_id' => $membership->id,
             'document_uuids' => [$document->uuid],
         ])->assertStatus(422);
+    }
+
+    public function test_payout_requires_referrer_mfa(): void
+    {
+        [, , , , $referrer, $membership] = $this->bootstrapSaleStack(threshold: 500);
+        $referrer->forceFill(['email_otp_enabled_at' => null])->save();
+
+        PaymentMethodVersion::query()->create([
+            'user_id' => $referrer->id,
+            'business_id' => $membership->business_id,
+            'business_membership_id' => $membership->id,
+            'method_type' => PaymentMethodType::Iban,
+            'payload_encrypted' => ['iban' => 'DE89370400440532013000', 'holder_name' => 'Referrer'],
+            'display_mask' => 'DE89**************3000',
+            'status' => PaymentMethodStatus::Approved,
+            'version' => 1,
+        ]);
+
+        $document = PrivateDocument::query()->create([
+            'user_id' => $referrer->id,
+            'business_id' => $membership->business_id,
+            'business_membership_id' => $membership->id,
+            'purpose' => 'payout_proof',
+            'disk' => 'private_documents',
+            'path' => 'demo/doc-mfa.pdf',
+            'original_filename' => 'doc-mfa.pdf',
+            'mime' => 'application/pdf',
+            'size_bytes' => 100,
+            'scan_status' => DocumentScanStatus::Clean,
+            'scanned_at' => now(),
+            'scan_engine' => 'fake',
+        ]);
+
+        $this->actingAs($referrer);
+        AuthSession::markFullyAuthenticated();
+
+        $this->asSpa()->postJson('/api/v1/portal/payout-requests', [
+            'membership_id' => $membership->id,
+            'document_uuids' => [$document->uuid],
+            'amount_minor' => 500,
+        ])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'mfa_required');
+    }
+
+    public function test_approve_fails_when_payable_drops_below_amount(): void
+    {
+        [$credential, $token, $secret, $code, $referrer, $membership] = $this->bootstrapSaleStack(threshold: 500);
+
+        $this->postSignedEvent($credential, $token, $secret, [
+            'external_event_id' => 'sale-approve-guard',
+            'event_type' => 'sale',
+            'occurred_at' => now()->toIso8601String(),
+            'amount_minor' => 10_000,
+            'currency' => 'EUR',
+            'referral_code' => $code->code,
+        ])->assertCreated();
+
+        PaymentMethodVersion::query()->create([
+            'user_id' => $referrer->id,
+            'business_id' => $membership->business_id,
+            'business_membership_id' => $membership->id,
+            'method_type' => PaymentMethodType::Iban,
+            'payload_encrypted' => ['iban' => 'DE89370400440532013000', 'holder_name' => 'Referrer'],
+            'display_mask' => 'DE89**************3000',
+            'status' => PaymentMethodStatus::Approved,
+            'version' => 1,
+        ]);
+
+        $document = PrivateDocument::query()->create([
+            'user_id' => $referrer->id,
+            'business_id' => $membership->business_id,
+            'business_membership_id' => $membership->id,
+            'purpose' => 'payout_proof',
+            'disk' => 'private_documents',
+            'path' => 'demo/doc-approve.pdf',
+            'original_filename' => 'doc-approve.pdf',
+            'mime' => 'application/pdf',
+            'size_bytes' => 100,
+            'scan_status' => DocumentScanStatus::Clean,
+            'scanned_at' => now(),
+            'scan_engine' => 'fake',
+        ]);
+
+        $this->actingAs($referrer);
+        AuthSession::markFullyAuthenticated();
+        $payoutId = $this->asSpa()->postJson('/api/v1/portal/payout-requests', [
+            'membership_id' => $membership->id,
+            'document_uuids' => [$document->uuid],
+            'amount_minor' => 1000,
+        ])->assertCreated()->json('data.id');
+
+        // Simulate an out-of-band payable drain (reserved soft-lock cannot prevent raw ledger inserts).
+        $payableAccount = \App\Models\LedgerAccount::query()
+            ->where('code', 'payable:membership:'.$membership->id)
+            ->firstOrFail();
+        $expenseAccount = \App\Models\LedgerAccount::query()
+            ->where('business_id', $membership->business_id)
+            ->where('code', 'commission_expense')
+            ->firstOrFail();
+
+        $entryId = \Illuminate\Support\Facades\DB::table('ledger_entries')->insertGetId([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'business_id' => $membership->business_id,
+            'commercial_event_id' => null,
+            'commission_id' => null,
+            'entry_type' => 'test_payable_drain',
+            'idempotency_key' => 'test_payable_drain:'.$payoutId,
+            'description' => 'Test drain',
+            'posted_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        \Illuminate\Support\Facades\DB::table('ledger_lines')->insert([
+            [
+                'ledger_entry_id' => $entryId,
+                'ledger_account_id' => $payableAccount->id,
+                'business_id' => $membership->business_id,
+                'side' => 'debit',
+                'amount_minor' => 1000,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'ledger_entry_id' => $entryId,
+                'ledger_account_id' => $expenseAccount->id,
+                'business_id' => $membership->business_id,
+                'side' => 'credit',
+                'amount_minor' => 1000,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $admin = User::query()->whereHas('memberships', function ($q) use ($membership): void {
+            $q->where('business_id', $membership->business_id)
+                ->where('role', MembershipRole::BusinessAdmin);
+        })->firstOrFail();
+
+        $this->actingAs($admin);
+        AuthSession::markFullyAuthenticated();
+
+        $this->asSpa()->postJson('/api/v1/admin/payout-requests/'.$payoutId.'/approve')
+            ->assertStatus(422);
     }
 
     /**
@@ -243,7 +401,9 @@ class RefundAndPayoutTest extends TestCase
             'status' => MembershipStatus::Approved,
         ]);
 
-        $referrer = User::factory()->create();
+        $referrer = User::factory()->create([
+            'email_otp_enabled_at' => now(),
+        ]);
         $membership = BusinessMembership::factory()->create([
             'business_id' => $business->id,
             'user_id' => $referrer->id,

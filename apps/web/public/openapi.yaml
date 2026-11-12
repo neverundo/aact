@@ -1,0 +1,338 @@
+openapi: 3.1.0
+info:
+  title: AACT AACommissionTool API
+  version: 0.5.0
+  description: |
+    Curated OpenAPI for the portfolio surface. Same-origin Sanctum SPA auth for portals;
+    bearer + HMAC for integrations. Money amounts are integer minor units.
+servers:
+  - url: http://localhost:18080
+    description: Local Compose gateway
+tags:
+  - name: Health
+  - name: Auth
+  - name: Integration
+  - name: Portal
+  - name: Admin
+paths:
+  /api/v1/health:
+    get:
+      tags: [Health]
+      summary: Liveness
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Correlation-Id:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Password step (may require MFA)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 12 }
+      responses:
+        "200":
+          description: Authenticated, MFA required, or MFA setup required
+  /api/v1/auth/mfa/verify:
+    post:
+      tags: [Auth]
+      summary: Complete MFA challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challenge_token, method, code]
+              properties:
+                challenge_token: { type: string }
+                method: { type: string, enum: [totp, email_otp, recovery_code] }
+                code: { type: string }
+      responses:
+        "200":
+          description: Fully authenticated session
+  /api/v1/integration/events:
+    post:
+      tags: [Integration]
+      summary: Ingest sale / refund / chargeback
+      description: |
+        Authenticate with `Authorization: Bearer <token>` plus
+        `X-AACT-Timestamp`, `X-AACT-Nonce`, `X-AACT-Signature`
+        where signature = hex(hmac_sha256(secret, timestamp + '.' + nonce + '.' + rawBody)).
+        Idempotent on (business, source, external_event_id).
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-AACT-Timestamp
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-AACT-Nonce
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-AACT-Signature
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/SaleEvent"
+                - $ref: "#/components/schemas/ReversalEvent"
+      responses:
+        "201":
+          description: Created (or attributed)
+        "200":
+          description: Replayed idempotent response
+  /api/v1/portal/balances:
+    get:
+      tags: [Portal]
+      summary: Referrer payable balances
+      security: [{ sanctum: [] }]
+      responses:
+        "200":
+          description: Balances per membership
+  /api/v1/portal/payout-requests:
+    get:
+      tags: [Portal]
+      summary: List own payout requests
+      security: [{ sanctum: [] }]
+      responses:
+        "200":
+          description: Paginated payout requests
+    post:
+      tags: [Portal]
+      summary: Request payout
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [membership_id, document_uuids]
+              properties:
+                membership_id: { type: integer }
+                document_uuids:
+                  type: array
+                  items: { type: string, format: uuid }
+                amount_minor: { type: integer, minimum: 1 }
+      responses:
+        "201":
+          description: Pending payout request
+  /api/v1/admin/memberships/{id}:
+    get:
+      tags: [Admin]
+      summary: Membership detail (includes user, websites, payment versions, codes)
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Membership
+  /api/v1/admin/businesses/{id}/branding:
+    get:
+      tags: [Admin]
+      summary: Get business branding
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Branding
+    put:
+      tags: [Admin]
+      summary: Update business branding colors
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [primary_color, secondary_color, accent_color]
+              properties:
+                display_name: { type: string, nullable: true }
+                primary_color: { type: string, example: "#1C1917" }
+                secondary_color: { type: string, example: "#57534E" }
+                accent_color: { type: string, example: "#0F766E" }
+      responses:
+        "200":
+          description: Updated branding
+  /api/v1/admin/businesses/{id}/branding/logo:
+    post:
+      tags: [Admin]
+      summary: Upload business logo
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [logo]
+              properties:
+                logo: { type: string, format: binary }
+      responses:
+        "200":
+          description: Logo stored
+  /api/v1/admin/websites/{id}/fetch-brand-assets:
+    post:
+      tags: [Admin]
+      summary: Best-effort favicon/logo fetch from website base_url
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Website with asset paths when fetch succeeded
+  /api/v1/admin/commission-rules/{id}/deactivate:
+    post:
+      tags: [Admin]
+      summary: Deactivate a commission rule
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Rule deactivated
+  /api/v1/branding/businesses/{id}/logo:
+    get:
+      tags: [Portal]
+      summary: Stream business logo (public, rate-limited)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Image bytes
+        "404":
+          description: No logo
+  /api/v1/portal/branding:
+    get:
+      tags: [Portal]
+      summary: Resolve branding for an accessible business
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: query
+          name: business_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Branding
+  /api/v1/admin/payout-requests/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve payout request
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Approved
+  /api/v1/admin/payout-requests/{id}/mark-paid:
+    post:
+      tags: [Admin]
+      summary: Record external settlement (ledger debit payable / credit clearing)
+      security: [{ sanctum: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [external_reference]
+              properties:
+                external_reference: { type: string }
+      responses:
+        "200":
+          description: Paid + settlement posted
+components:
+  securitySchemes:
+    sanctum:
+      type: apiKey
+      in: cookie
+      name: aact_session
+  schemas:
+    SaleEvent:
+      type: object
+      required: [external_event_id, event_type, occurred_at, amount_minor, currency]
+      properties:
+        external_event_id: { type: string }
+        event_type: { type: string, example: sale }
+        occurred_at: { type: string, format: date-time }
+        amount_minor: { type: integer, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        referral_code: { type: string }
+        metadata: { type: object, additionalProperties: true }
+    ReversalEvent:
+      type: object
+      required:
+        - external_event_id
+        - event_type
+        - related_external_event_id
+        - occurred_at
+        - amount_minor
+        - currency
+      properties:
+        external_event_id: { type: string }
+        event_type: { type: string, enum: [refund, chargeback] }
+        related_external_event_id: { type: string }
+        occurred_at: { type: string, format: date-time }
+        amount_minor: { type: integer, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        metadata: { type: object, additionalProperties: true }

@@ -37,7 +37,13 @@ class PasswordController extends Controller
             ->delete();
 
         $request->session()->regenerate();
-        AuthSession::markFullyAuthenticated();
+
+        // Align with login: admins without confirmed TOTP stay in MFA setup-only.
+        if ($user->isAdminUser() && ! $user->hasConfirmedTotp()) {
+            AuthSession::markMfaSetupOnly();
+        } else {
+            AuthSession::markFullyAuthenticated();
+        }
 
         return response()->json(['status' => 'password_updated']);
     }

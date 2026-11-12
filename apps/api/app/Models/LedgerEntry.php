@@ -46,6 +46,14 @@ class LedgerEntry extends Model
                 $entry->uuid = (string) Str::uuid();
             }
         });
+
+        static::updating(function (): void {
+            throw new \LogicException('Ledger entries are append-only and cannot be updated.');
+        });
+
+        static::deleting(function (): void {
+            throw new \LogicException('Ledger entries are append-only and cannot be deleted.');
+        });
     }
 
     /** @return HasMany<LedgerLine, $this> */

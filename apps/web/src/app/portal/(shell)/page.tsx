@@ -51,6 +51,8 @@ type Balance = {
   business_name: string | null;
   currency: string | null;
   payable_minor: number;
+  reserved_minor: number;
+  available_minor: number;
   payout_threshold_minor: number;
 };
 
@@ -450,7 +452,9 @@ export default function PortalHomePage() {
               <li key={balance.membership_id}>
                 {t("balanceLine", {
                   name: balance.business_name ?? `#${balance.membership_id}`,
-                  amount: balance.payable_minor,
+                  amount: balance.available_minor,
+                  payable: balance.payable_minor,
+                  reserved: balance.reserved_minor,
                   code: balance.currency ?? "",
                   count: balance.payout_threshold_minor,
                 })}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useSyncExternalStore } from "react";
 import type { NavGroup } from "@/lib/nav";
+import type { AppShellBrand } from "./brand";
 import { usePortalBrand } from "./PortalBrandTheme";
 import { SidebarNav } from "./SidebarNav";
 import { useShell } from "./ShellProvider";
@@ -36,20 +37,23 @@ function brandInitials(name: string): string {
 export function Sidebar({
   groups,
   homeHref,
+  brand,
 }: {
   groups: NavGroup[];
   homeHref: string;
+  brand?: AppShellBrand;
 }) {
   const t = useTranslations("common");
   const { collapsed, mobileOpen, setMobileOpen, toggleCollapsed } = useShell();
-  const brand = usePortalBrand();
+  const portalBrand = usePortalBrand();
   const isLg = useSyncExternalStore(
     subscribeIsLg,
     getIsLgSnapshot,
     getIsLgServerSnapshot,
   );
   const railMode = collapsed && isLg;
-  const markLabel = brand.brandName ?? "AACT";
+  const markLabel = brand?.name ?? portalBrand.brandName ?? "AACT";
+  const logoSrc = brand?.logoSrc ?? portalBrand.logoUrl;
   const words = brandWords(markLabel);
   const initials = brandInitials(markLabel);
 
@@ -91,15 +95,15 @@ export function Sidebar({
             onClick={() => setMobileOpen(false)}
             aria-label={markLabel}
             style={
-              brand.accent
+              portalBrand.accent
                 ? { color: "var(--brand-primary, #1c1917)" }
                 : undefined
             }
           >
-            {brand.logoUrl ? (
+            {logoSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={brand.logoUrl}
+                src={logoSrc}
                 alt=""
                 className={[
                   "shrink-0 rounded object-contain",
@@ -119,7 +123,7 @@ export function Sidebar({
               <span
                 className={[
                   "flex min-w-0 flex-col font-semibold tracking-[0.16em] uppercase",
-                  brand.logoUrl
+                  logoSrc
                     ? "h-9 justify-center gap-0.5 text-xs leading-none"
                     : "gap-0.5 text-sm leading-none",
                 ].join(" ")}
@@ -132,21 +136,18 @@ export function Sidebar({
               </span>
             ) : null}
           </Link>
-          <button
-            type="button"
-            className={[
-              "hidden items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 lg:inline-flex",
-              railMode ? "h-8 w-8 shrink-0" : "min-h-11 min-w-11",
-            ].join(" ")}
-            aria-label={
-              collapsed ? t("expandSidebar") : t("collapseSidebar")
-            }
-            aria-expanded={!collapsed}
-            aria-controls="app-sidebar"
-            onClick={toggleCollapsed}
-          >
-            <CollapseIcon collapsed={collapsed} />
-          </button>
+          {!railMode ? (
+            <button
+              type="button"
+              className="hidden min-h-11 min-w-11 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 lg:inline-flex"
+              aria-label={t("collapseSidebar")}
+              aria-expanded={!collapsed}
+              aria-controls="app-sidebar"
+              onClick={toggleCollapsed}
+            >
+              <CollapseIcon />
+            </button>
+          ) : null}
           <button
             type="button"
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 lg:hidden"
@@ -165,7 +166,7 @@ export function Sidebar({
   );
 }
 
-function CollapseIcon({ collapsed }: { collapsed: boolean }) {
+function CollapseIcon() {
   return (
     <svg
       viewBox="0 0 20 20"
@@ -174,7 +175,7 @@ function CollapseIcon({ collapsed }: { collapsed: boolean }) {
       className="h-5 w-5"
     >
       <path
-        d={collapsed ? "M8 5l5 5-5 5" : "M12 5l-5 5 5 5"}
+        d="M12 5l-5 5 5 5"
         stroke="currentColor"
         strokeWidth="1.75"
         strokeLinecap="round"

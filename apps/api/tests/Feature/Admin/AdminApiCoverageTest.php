@@ -59,6 +59,17 @@ class AdminApiCoverageTest extends TestCase
             ->assertOk()
             ->assertJsonStructure(['data']);
 
+        $this->asSpa()->postJson('/api/v1/admin/integrations', [
+            'business_id' => $business->id,
+            'website_id' => $website->id,
+            'source' => 'coverage_checkout',
+            'name' => 'Coverage checkout',
+        ])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'step_up_required');
+
+        AuthSession::markStepUp();
+
         $created = $this->asSpa()->postJson('/api/v1/admin/integrations', [
             'business_id' => $business->id,
             'website_id' => $website->id,
@@ -69,6 +80,15 @@ class AdminApiCoverageTest extends TestCase
             ->assertJsonStructure(['credential', 'token', 'hmac_secret']);
 
         $credentialId = $created->json('credential.id');
+
+        AuthSession::clear();
+        AuthSession::markFullyAuthenticated();
+
+        $this->asSpa()->postJson('/api/v1/admin/integrations/'.$credentialId.'/rotate')
+            ->assertForbidden()
+            ->assertJsonPath('code', 'step_up_required');
+
+        AuthSession::markStepUp();
 
         $this->asSpa()->postJson('/api/v1/admin/integrations/'.$credentialId.'/rotate')
             ->assertOk()
@@ -136,6 +156,8 @@ class AdminApiCoverageTest extends TestCase
             'rate_bps' => 100,
             'effective_from' => Carbon::now()->toIso8601String(),
         ])->assertStatus(422);
+
+        AuthSession::markStepUp();
 
         $this->asSpa()->postJson('/api/v1/admin/integrations', [
             'business_id' => $other->id,

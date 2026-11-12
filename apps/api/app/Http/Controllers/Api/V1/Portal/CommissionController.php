@@ -32,14 +32,21 @@ class CommissionController extends Controller
             ->with('business')
             ->get();
 
-        $balances = $memberships->map(fn ($membership) => [
-            'membership_id' => $membership->id,
-            'business_id' => $membership->business_id,
-            'business_name' => $membership->business?->name,
-            'currency' => $membership->business?->currency,
-            'payable_minor' => $this->ledger->payableBalanceMinor($membership),
-            'payout_threshold_minor' => (int) ($membership->business->payout_threshold_minor ?? 5000),
-        ])->values();
+        $balances = $memberships->map(function ($membership) {
+            $payable = $this->ledger->payableBalanceMinor($membership);
+            $reserved = $this->ledger->reservedPayoutMinor($membership);
+
+            return [
+                'membership_id' => $membership->id,
+                'business_id' => $membership->business_id,
+                'business_name' => $membership->business?->name,
+                'currency' => $membership->business?->currency,
+                'payable_minor' => $payable,
+                'reserved_minor' => $reserved,
+                'available_minor' => max(0, $payable - $reserved),
+                'payout_threshold_minor' => (int) ($membership->business->payout_threshold_minor ?? 5000),
+            ];
+        })->values();
 
         return response()->json(['data' => $balances]);
     }

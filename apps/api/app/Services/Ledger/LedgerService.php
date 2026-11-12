@@ -4,6 +4,7 @@ namespace App\Services\Ledger;
 
 use App\Enums\LedgerAccountType;
 use App\Enums\LedgerSide;
+use App\Enums\PayoutRequestStatus;
 use App\Models\BusinessMembership;
 use App\Models\Commission;
 use App\Models\LedgerAccount;
@@ -141,6 +142,28 @@ class LedgerService
         $debits = (int) $account->lines()->where('side', LedgerSide::Debit)->sum('amount_minor');
 
         return $credits - $debits;
+    }
+
+    /**
+     * Soft-reserved amount for open (pending/approved) payout requests.
+     */
+    public function reservedPayoutMinor(BusinessMembership $membership): int
+    {
+        return (int) PayoutRequest::query()
+            ->where('business_membership_id', $membership->id)
+            ->whereIn('status', [
+                PayoutRequestStatus::Pending->value,
+                PayoutRequestStatus::Approved->value,
+            ])
+            ->sum('amount_minor');
+    }
+
+    /**
+     * Payable not committed to an open payout request.
+     */
+    public function availableBalanceMinor(BusinessMembership $membership): int
+    {
+        return max(0, $this->payableBalanceMinor($membership) - $this->reservedPayoutMinor($membership));
     }
 
     private function postBalancedEntry(PostBalancedEntryData $data): LedgerEntry

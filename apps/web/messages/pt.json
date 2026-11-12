@@ -81,7 +81,32 @@
     "documentation": "Documentação"
   },
   "docs": {
-    "title": "Documentação"
+    "title": "Documentação",
+    "brand": "Docs AACT",
+    "metaTitle": "Documentação AACT",
+    "metaDescription": "Documentação pública da AACommissionTool — setup, integração checkout, API, segurança e operações.",
+    "navLabel": "Documentação",
+    "sidebarTitle": "Guias",
+    "home": "Início",
+    "openNav": "Menu",
+    "closeNav": "Fechar",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "previous": "Anterior",
+    "next": "Seguinte",
+    "nav": {
+      "overview": "Visão geral",
+      "gettingStarted": "Começar",
+      "integrations": "Integrações",
+      "checkout": "Checkout",
+      "events": "Eventos",
+      "integrationAuth": "Autenticação",
+      "idempotency": "Idempotência",
+      "refunds": "Reembolsos",
+      "api": "API",
+      "security": "Segurança",
+      "operations": "Operações"
+    }
   },
   "auth": {
     "loginTitle": "Iniciar sessão",
@@ -465,7 +490,7 @@
       "emptyMembershipsDescription": "Aceite um convite para começar.",
       "balancesTitle": "Saldos e comissões",
       "emptyBalances": "Sem saldo ledger ainda",
-      "balanceLine": "{name}: {amount} {code} (limiar payout {count})",
+      "balanceLine": "{name}: {amount} {code} disponível (pagável {payable}, reservado {reserved}; limiar {count})",
       "emptyCommissions": "Sem comissões",
       "commissionLine": "#{id} · {amount} {code} · {title} (base {payments}{documents})",
       "commissionReversed": "; revertido {amount}"

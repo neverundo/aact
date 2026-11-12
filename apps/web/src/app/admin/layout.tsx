@@ -6,7 +6,11 @@ import { adminNav } from "@/lib/nav";
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <AuthGate area="admin">
-      <AppShell groups={adminNav} homeHref="/admin">
+      <AppShell
+        groups={adminNav}
+        homeHref="/admin"
+        brand={{ logoSrc: "/aact.svg", name: "AACT" }}
+      >
         {children}
       </AppShell>
     </AuthGate>

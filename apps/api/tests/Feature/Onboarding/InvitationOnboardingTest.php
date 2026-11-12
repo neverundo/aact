@@ -13,6 +13,7 @@ use App\Models\ReferralCode;
 use App\Models\User;
 use App\Models\Website;
 use App\Notifications\ReferrerInvitationNotification;
+use App\Http\Middleware\SoftAuthenticateSession;
 use App\Support\AuthSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -31,7 +32,11 @@ class InvitationOnboardingTest extends TestCase
 
         // Multi-actor flows switch users mid-test; password_hash session checks
         // would otherwise invalidate actingAs swaps after a real login/register.
-        $this->withoutMiddleware(AuthenticateSession::class);
+        // SoftAuthenticateSession replaces Sanctum's AuthenticateSession in bootstrap.
+        $this->withoutMiddleware([
+            AuthenticateSession::class,
+            SoftAuthenticateSession::class,
+        ]);
     }
 
     public function test_get_invitation_preview_does_not_consume_token(): void
@@ -91,6 +96,7 @@ class InvitationOnboardingTest extends TestCase
 
         $referrer = User::query()->where('email', 'flow@example.test')->firstOrFail();
         $this->actingAs($referrer);
+        AuthSession::markFullyAuthenticated();
 
         $membershipId = (int) BusinessMembership::query()
             ->where('business_id', $business->id)
@@ -140,6 +146,7 @@ class InvitationOnboardingTest extends TestCase
         $code = ReferralCode::query()->where('business_membership_id', $membershipId)->firstOrFail();
 
         $this->actingAs($referrer);
+        AuthSession::markFullyAuthenticated();
 
         $this->asSpa()->postJson('/api/v1/portal/referral-codes/'.$code->id.'/link', [
             'website_id' => $website->id,
@@ -163,6 +170,7 @@ class InvitationOnboardingTest extends TestCase
 
         $owner = User::query()->where('email', 'docs@example.test')->firstOrFail();
         $this->actingAs($owner);
+        AuthSession::markFullyAuthenticated();
 
         $membershipId = (int) BusinessMembership::query()
             ->where('role', MembershipRole::Referrer)
@@ -181,11 +189,13 @@ class InvitationOnboardingTest extends TestCase
 
         $intruder = User::factory()->create();
         $this->actingAs($intruder);
+        AuthSession::markFullyAuthenticated();
 
         $this->asSpa()->get('/api/v1/portal/documents/'.$uuid.'/download')
             ->assertForbidden();
 
         $this->actingAs($owner);
+        AuthSession::markFullyAuthenticated();
 
         $this->asSpa()->get('/api/v1/portal/documents/'.$uuid.'/download')
             ->assertOk();
@@ -207,6 +217,7 @@ class InvitationOnboardingTest extends TestCase
 
         $intruder = User::factory()->create();
         $this->actingAs($intruder);
+        AuthSession::markFullyAuthenticated();
 
         $this->asSpa()->getJson('/api/v1/portal/memberships/'.$membershipId)->assertForbidden();
     }

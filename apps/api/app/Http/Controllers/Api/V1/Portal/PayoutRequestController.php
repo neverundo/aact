@@ -28,6 +28,13 @@ class PayoutRequestController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if (! $request->user()->hasAnyMfaEnabled()) {
+            return response()->json([
+                'message' => 'Enable MFA before requesting payouts.',
+                'code' => 'mfa_required',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'membership_id' => ['required', 'integer', 'exists:business_memberships,id'],
             'document_uuids' => ['required', 'array', 'min:1'],

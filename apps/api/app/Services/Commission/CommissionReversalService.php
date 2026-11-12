@@ -11,6 +11,7 @@ use App\Models\IntegrationCredential;
 use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
 use App\Services\Ledger\LedgerService;
+use App\Support\Money;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -252,17 +253,21 @@ class CommissionReversalService
             return $this->ignoreReversal($event, $ignoreReason, $commission);
         }
 
-        $proportional = (int) floor(
-            ($commission->commission_minor * $context['amount_minor']) / max(1, $originalEvent->amount_minor)
+        $proportional = Money::proportionalMinor(
+            $commission->commission_minor,
+            $context['amount_minor'],
+            $originalEvent->amount_minor,
         );
         $toReverse = min($proportional, $commission->reversibleMinor());
 
         $membership = $commission->membership()->lockForUpdate()->firstOrFail();
-        $payable = $this->ledger->payableBalanceMinor($membership);
-        $toReverse = min($toReverse, max(0, $payable));
+        // Cap against available (payable minus open payout reservations) so soft-locked
+        // payout amounts are not clawed back out from under an in-flight settlement.
+        $available = $this->ledger->availableBalanceMinor($membership);
+        $toReverse = min($toReverse, max(0, $available));
 
         if ($toReverse <= 0) {
-            return $this->ignoreReversal($event, 'Payable balance insufficient for reversal.', $commission);
+            return $this->ignoreReversal($event, 'Available balance insufficient for reversal.', $commission);
         }
 
         $this->ledger->postCommissionReversal($commission, $toReverse, $event->id);

@@ -107,23 +107,27 @@ Route::prefix('v1')->group(function (): void {
         ->middleware('throttle:60,1');
 
     Route::middleware('auth:sanctum')->prefix('portal')->group(function (): void {
+        // Invitation accept stays reachable during MFA setup so onboarding can complete.
         Route::post('/invitations/{uuid}/accept', [InvitationAcceptanceController::class, 'accept']);
-        Route::get('/profile', [ProfileController::class, 'show']);
-        Route::put('/profile', [ProfileController::class, 'update']);
-        Route::get('/branding', [PortalBrandingController::class, 'show']);
-        Route::get('/memberships', [PortalMembershipController::class, 'index']);
-        Route::get('/memberships/{membership}', [PortalMembershipController::class, 'show']);
-        Route::post('/memberships/{membership}/payment-methods', [PaymentMethodController::class, 'store']);
-        Route::get('/memberships/{membership}/documents', [DocumentController::class, 'index']);
-        Route::post('/memberships/{membership}/documents', [DocumentController::class, 'store']);
-        Route::get('/documents/{uuid}/download', [DocumentController::class, 'download']);
-        Route::get('/referral-codes', [ReferralCodeController::class, 'index']);
-        Route::post('/referral-codes/{referralCode}/link', [ReferralCodeController::class, 'link']);
-        Route::post('/referral-codes/{referralCode}/qr', [ReferralCodeController::class, 'qr']);
-        Route::get('/commissions', [PortalCommissionController::class, 'index']);
-        Route::get('/balances', [PortalCommissionController::class, 'balances']);
-        Route::get('/payout-requests', [PortalPayoutRequestController::class, 'index']);
-        Route::post('/payout-requests', [PortalPayoutRequestController::class, 'store']);
+
+        Route::middleware('fully.authenticated')->group(function (): void {
+            Route::get('/profile', [ProfileController::class, 'show']);
+            Route::put('/profile', [ProfileController::class, 'update']);
+            Route::get('/branding', [PortalBrandingController::class, 'show']);
+            Route::get('/memberships', [PortalMembershipController::class, 'index']);
+            Route::get('/memberships/{membership}', [PortalMembershipController::class, 'show']);
+            Route::post('/memberships/{membership}/payment-methods', [PaymentMethodController::class, 'store']);
+            Route::get('/memberships/{membership}/documents', [DocumentController::class, 'index']);
+            Route::post('/memberships/{membership}/documents', [DocumentController::class, 'store']);
+            Route::get('/documents/{uuid}/download', [DocumentController::class, 'download']);
+            Route::get('/referral-codes', [ReferralCodeController::class, 'index']);
+            Route::post('/referral-codes/{referralCode}/link', [ReferralCodeController::class, 'link']);
+            Route::post('/referral-codes/{referralCode}/qr', [ReferralCodeController::class, 'qr']);
+            Route::get('/commissions', [PortalCommissionController::class, 'index']);
+            Route::get('/balances', [PortalCommissionController::class, 'balances']);
+            Route::get('/payout-requests', [PortalPayoutRequestController::class, 'index']);
+            Route::post('/payout-requests', [PortalPayoutRequestController::class, 'store']);
+        });
     });
 
     Route::middleware(['auth:sanctum', 'admin.access'])
@@ -154,9 +158,11 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('step.up');
 
             Route::get('integrations', [IntegrationCredentialController::class, 'index']);
-            Route::post('integrations', [IntegrationCredentialController::class, 'store']);
+            Route::post('integrations', [IntegrationCredentialController::class, 'store'])
+                ->middleware('step.up');
             Route::post('integrations/{integrationCredential}/revoke', [IntegrationCredentialController::class, 'revoke']);
-            Route::post('integrations/{integrationCredential}/rotate', [IntegrationCredentialController::class, 'rotate']);
+            Route::post('integrations/{integrationCredential}/rotate', [IntegrationCredentialController::class, 'rotate'])
+                ->middleware('step.up');
 
             Route::get('commission-rules', [CommissionRuleController::class, 'index']);
             Route::post('commission-rules', [CommissionRuleController::class, 'store']);
@@ -168,6 +174,7 @@ Route::prefix('v1')->group(function (): void {
             Route::get('payout-requests', [AdminPayoutRequestController::class, 'index']);
             Route::post('payout-requests/{payoutRequest}/approve', [AdminPayoutRequestController::class, 'approve']);
             Route::post('payout-requests/{payoutRequest}/reject', [AdminPayoutRequestController::class, 'reject']);
-            Route::post('payout-requests/{payoutRequest}/mark-paid', [AdminPayoutRequestController::class, 'markPaid']);
+            Route::post('payout-requests/{payoutRequest}/mark-paid', [AdminPayoutRequestController::class, 'markPaid'])
+                ->middleware('step.up');
         });
 });

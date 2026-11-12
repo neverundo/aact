@@ -32,6 +32,17 @@ class LedgerLine extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::updating(function (): void {
+            throw new \LogicException('Ledger lines are append-only and cannot be updated.');
+        });
+
+        static::deleting(function (): void {
+            throw new \LogicException('Ledger lines are append-only and cannot be deleted.');
+        });
+    }
+
     /** @return BelongsTo<LedgerEntry, $this> */
     public function entry(): BelongsTo
     {

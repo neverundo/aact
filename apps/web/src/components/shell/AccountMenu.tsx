@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
@@ -27,6 +27,7 @@ function initials(name: string): string {
 
 export function AccountMenu() {
   const router = useRouter();
+  const pathname = usePathname();
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const t = useTranslations("account");
@@ -35,6 +36,12 @@ export function AccountMenu() {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [savingLocale, setSavingLocale] = useState(false);
+  const securityHref =
+    user && !user.is_admin
+      ? "/portal/security"
+      : pathname.startsWith("/portal")
+        ? "/portal/security"
+        : "/admin/security";
 
   useEffect(() => {
     fetchMe()
@@ -117,7 +124,7 @@ export function AccountMenu() {
           </div>
           <Link
             role="menuitem"
-            href="/admin/security"
+            href={securityHref}
             className="mt-1 block rounded-md px-3 py-2 text-sm text-stone-700 hover:bg-stone-50"
             onClick={() => setOpen(false)}
           >

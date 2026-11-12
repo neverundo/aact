@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\MembershipRole;
+use App\Models\Business;
+use App\Models\BusinessMembership;
 use App\Models\User;
 use App\Support\AuthSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -68,6 +71,39 @@ class PasswordSessionProfileTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('status', 'password_updated');
+
+        $this->asSpa()->getJson('/api/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.session.mfa_setup_only', false);
+    }
+
+    public function test_admin_password_change_keeps_mfa_setup_only_without_totp(): void
+    {
+        $business = Business::factory()->create();
+        $user = User::factory()->create([
+            'password' => Hash::make('secure-passphrase-1'),
+        ]);
+
+        BusinessMembership::factory()->create([
+            'business_id' => $business->id,
+            'user_id' => $user->id,
+            'role' => MembershipRole::BusinessAdmin,
+        ]);
+
+        $this->actingAs($user);
+        AuthSession::markMfaSetupOnly();
+
+        $this->asSpa()->putJson('/api/v1/auth/password', [
+            'current_password' => 'secure-passphrase-1',
+            'password' => 'secure-passphrase-2',
+            'password_confirmation' => 'secure-passphrase-2',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'password_updated');
+
+        $this->asSpa()->getJson('/api/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.session.mfa_setup_only', true);
     }
 
     public function test_session_and_profile_endpoints(): void

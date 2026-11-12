@@ -41,6 +41,11 @@ const pages: Record<DocLocale, DocPage> = {
                 description: "End-to-end flow from referral link to event",
               },
               {
+                href: "/docs/integrations/client",
+                label: "Client & notifier",
+                description: "PHP and TypeScript signing client + paid hook",
+              },
+              {
                 href: "/docs/integrations/events",
                 label: "Events",
                 description: "Payload shapes and response codes",
@@ -73,6 +78,7 @@ const pages: Record<DocLocale, DocPage> = {
             items: [
               "examples/node-checkout — post-sale.mjs and post-refund.mjs",
               "examples/offline-sale — offline / POS style sale helper",
+              "docs/integrations/external-hook.md — origin env, hook timing, FitForge reference",
             ],
           },
           { type: "status", label: "Executable examples", status: "implemented" },
@@ -120,6 +126,11 @@ const pages: Record<DocLocale, DocPage> = {
                 description: "Fluxo de ponta a ponta do link de referral ao evento",
               },
               {
+                href: "/docs/integrations/client",
+                label: "Cliente e notifier",
+                description: "Client de assinatura PHP/TypeScript + hook paid",
+              },
+              {
                 href: "/docs/integrations/events",
                 label: "Eventos",
                 description: "Formas de payload e códigos de resposta",
@@ -152,6 +163,7 @@ const pages: Record<DocLocale, DocPage> = {
             items: [
               "examples/node-checkout — post-sale.mjs e post-refund.mjs",
               "examples/offline-sale — helper de venda offline / POS",
+              "docs/integrations/external-hook.md — env de origem, timing do hook, referência FitForge",
             ],
           },
           { type: "status", label: "Exemplos executáveis", status: "implemented" },

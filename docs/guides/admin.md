@@ -21,10 +21,10 @@ Map of admin screens. Each screen also has an in-app **Ajuda** button.
 
 1. Create business → add website.
 2. Create commission rule for that website.
-3. Create integration credential (`source` e.g. `node_checkout`).
+3. Create integration credential (`source` e.g. `node_checkout`) — requires step-up; copy `token` + `hmac_secret` into the origin backend env (`AACT_URL` / `AACT_TOKEN` / `AACT_HMAC_SECRET`).
 4. Invite referrer with website assignment.
 5. Referrer submits payment method → admin approves → approve membership.
-6. Checkout posts sales with `referral_code`.
+6. Origin checkout posts signed sales with `referral_code` after PSP confirmation (see [../integrations/external-hook.md](../integrations/external-hook.md)).
 
 ## Authorization
 

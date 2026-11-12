@@ -58,9 +58,12 @@ export default function AdminPaymentMethodsPage() {
 
   const load = useCallback(async () => {
     const params = new URLSearchParams();
-    if (statusFilter) params.set("status", statusFilter);
+    if (statusFilter && statusFilter !== "all") {
+      params.set("status", statusFilter);
+    }
+    const query = params.toString();
     const response = await apiFetch<{ data: PaymentMethod[] }>(
-      `/api/v1/admin/payment-methods?${params.toString()}`,
+      `/api/v1/admin/payment-methods${query ? `?${query}` : ""}`,
     );
     setItems(response.data);
   }, [statusFilter]);

@@ -50,17 +50,39 @@ const pages: Record<DocLocale, DocPage> = {
       },
       {
         id: "snippet",
-        title: "Node signing sketch",
+        title: "Signing sketches",
         blocks: [
           {
             type: "code",
-            language: "javascript",
-            code: `const rawBody = JSON.stringify(body);
+            language: "typescript",
+            caption: "TypeScript",
+            code: `import { createHmac, randomBytes } from "node:crypto";
+
+const rawBody = JSON.stringify(body);
 const timestamp = Math.floor(Date.now() / 1000).toString();
 const nonce = randomBytes(16).toString("hex");
 const signature = createHmac("sha256", hmacSecret)
   .update(\`\${timestamp}.\${nonce}.\${rawBody}\`)
   .digest("hex");`,
+          },
+          {
+            type: "code",
+            language: "php",
+            caption: "PHP",
+            code: `$rawBody = json_encode($body, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+$timestamp = (string) time();
+$nonce = bin2hex(random_bytes(16));
+$signature = hash_hmac('sha256', $timestamp.'.'.$nonce.'.'.$rawBody, $hmacSecret);`,
+          },
+          {
+            type: "linkList",
+            items: [
+              {
+                href: "/docs/integrations/client",
+                label: "Full client & notifier",
+                description: "Ready-to-adapt PHP and TypeScript helpers",
+              },
+            ],
           },
         ],
       },
@@ -115,17 +137,39 @@ const signature = createHmac("sha256", hmacSecret)
       },
       {
         id: "snippet",
-        title: "Esboço de assinatura Node",
+        title: "Esboços de assinatura",
         blocks: [
           {
             type: "code",
-            language: "javascript",
-            code: `const rawBody = JSON.stringify(body);
+            language: "typescript",
+            caption: "TypeScript",
+            code: `import { createHmac, randomBytes } from "node:crypto";
+
+const rawBody = JSON.stringify(body);
 const timestamp = Math.floor(Date.now() / 1000).toString();
 const nonce = randomBytes(16).toString("hex");
 const signature = createHmac("sha256", hmacSecret)
   .update(\`\${timestamp}.\${nonce}.\${rawBody}\`)
   .digest("hex");`,
+          },
+          {
+            type: "code",
+            language: "php",
+            caption: "PHP",
+            code: `$rawBody = json_encode($body, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+$timestamp = (string) time();
+$nonce = bin2hex(random_bytes(16));
+$signature = hash_hmac('sha256', $timestamp.'.'.$nonce.'.'.$rawBody, $hmacSecret);`,
+          },
+          {
+            type: "linkList",
+            items: [
+              {
+                href: "/docs/integrations/client",
+                label: "Cliente e notifier completos",
+                description: "Helpers PHP e TypeScript prontos a adaptar",
+              },
+            ],
           },
         ],
       },

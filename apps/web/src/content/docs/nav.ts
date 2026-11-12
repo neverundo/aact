@@ -9,6 +9,7 @@ export const docsNav: DocNavItem[] = [
     labelKey: "nav.integrations",
     children: [
       { href: "/docs/integrations/checkout", labelKey: "nav.checkout" },
+      { href: "/docs/integrations/client", labelKey: "nav.integrationClient" },
       { href: "/docs/integrations/events", labelKey: "nav.events" },
       {
         href: "/docs/integrations/authentication",
@@ -28,6 +29,7 @@ export const docsPageOrder: string[] = [
   "/docs/getting-started",
   "/docs/integrations",
   "/docs/integrations/checkout",
+  "/docs/integrations/client",
   "/docs/integrations/events",
   "/docs/integrations/authentication",
   "/docs/integrations/idempotency",

@@ -75,16 +75,16 @@ export const adminNav: NavGroup[] = [
         icon: "envelope",
       },
       {
-        href: "/admin/memberships",
-        labelKey: "nav.admin.memberships",
-        shortLabelKey: "nav.admin.membershipsShort",
-        icon: "users",
-      },
-      {
         href: "/admin/payment-methods",
         labelKey: "nav.admin.paymentMethods",
         shortLabelKey: "nav.admin.paymentMethodsShort",
         icon: "creditCard",
+      },
+      {
+        href: "/admin/memberships",
+        labelKey: "nav.admin.memberships",
+        shortLabelKey: "nav.admin.membershipsShort",
+        icon: "users",
       },
     ],
   },

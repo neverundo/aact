@@ -77,7 +77,7 @@
     "navLabel": "Áreas da aplicação",
     "login": "Iniciar sessão",
     "admin": "Administração",
-    "portal": "Portal do referrer",
+    "portal": "Portal do Parceiro",
     "documentation": "Documentação"
   },
   "docs": {
@@ -99,6 +99,7 @@
       "gettingStarted": "Começar",
       "integrations": "Integrações",
       "checkout": "Checkout",
+      "integrationClient": "Cliente e notifier",
       "events": "Eventos",
       "integrationAuth": "Autenticação",
       "idempotency": "Idempotência",
@@ -171,7 +172,7 @@
       "securityShort": "Sec"
     },
     "portal": {
-      "memberships": "Comissionados",
+      "memberships": "Parcerias",
       "membershipsShort": "Mem",
       "payment": "Pagamento",
       "paymentShort": "Pag",
@@ -343,12 +344,17 @@
       "description": "Credenciais bearer + HMAC por business/website/source para POST /api/v1/integration/events.",
       "create": "Criar credencial",
       "createDrawerTitle": "Criar credencial",
-      "createDrawerDescription": "Segredos bearer + HMAC só aparecem na criação. Guarde-os de imediato.",
+      "createDrawerDescription": "Segredos bearer + HMAC só aparecem na criação. Guarde-os de imediato. Criar exige reautenticação recente (step-up).",
       "created": "Credencial criada. Guarde os segredos abaixo.",
       "rotated": "Credencial rodada. Guarde os novos segredos.",
       "revoked": "Credencial revogada.",
       "rotateFailed": "Falha ao rodar.",
       "revokeFailed": "Falha ao revogar.",
+      "rotateDrawerTitle": "Rodar credencial",
+      "rotateDrawerDescription": "Rodar emite novos segredos bearer + HMAC (mostrados uma vez). Confirme com a palavra-passe.",
+      "rotateSubmit": "Rodar",
+      "password": "Palavra-passe",
+      "stepUpHint": "A palavra-passe confirma o step-up para esta ação sensível (válido ~15 minutos).",
       "confirmRevoke": "Revogar esta credencial? Deixa de autenticar eventos.",
       "emptyTitle": "Sem integrações",
       "emptyDescription": "Crie uma credencial para ingestão HMAC a partir do checkout externo.",
@@ -489,10 +495,10 @@
   },
   "portal": {
     "home": {
-      "title": "Portal do referrer",
+      "title": "Portal do Parceiro",
       "description": "Sessão de {email}. Complete pagamento e documentos enquanto a membership estiver pendente; códigos só após aprovação.",
-      "memberships": "Comissionados",
-      "emptyMembershipsTitle": "Sem comissionados",
+      "memberships": "Parcerias",
+      "emptyMembershipsTitle": "Sem parcerias",
       "emptyMembershipsDescription": "Aceite um convite para começar.",
       "balancesTitle": "Saldos e comissões",
       "emptyBalances": "Sem saldo ledger ainda",

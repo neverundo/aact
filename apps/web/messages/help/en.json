@@ -65,17 +65,19 @@
       "title": "Integrations",
       "summary": "Bearer + HMAC credentials per business/website/source for ingesting external checkout events.",
       "actions": [
-        "Create credential (stable source, e.g. node_checkout).",
-        "Rotate or revoke credentials.",
+        "Create credential (stable source, e.g. node_checkout) with step-up password.",
+        "Rotate or revoke credentials (rotate also requires step-up).",
         "Open the “How to integrate” guide."
       ],
       "prerequisites": [
         "Existing business and website.",
-        "Unique source per business."
+        "Unique source per business.",
+        "Admin password for step-up on create/rotate."
       ],
       "pitfalls": [
         "Token and HMAC only appear on create/rotate.",
-        "Source is not a runtime: it is the channel identifier (idempotency)."
+        "Source is not a runtime: it is the channel identifier (idempotency).",
+        "Create/rotate fail with step_up_required until password is confirmed."
       ],
       "docsHref": "/docs/integrations/checkout.md"
     },

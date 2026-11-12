@@ -78,6 +78,70 @@ const pages: Record<DocLocale, DocPage> = {
         ],
       },
       {
+        id: "origin-env",
+        title: "Origin environment",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Configure the external site backend (never the browser) with the AACT gateway URL and the credential secrets from Admin → Integrations.",
+          },
+          {
+            type: "table",
+            headers: ["Variable", "Purpose"],
+            rows: [
+              ["AACT_URL", "AACT gateway base URL (local demo: http://localhost:18080)"],
+              ["AACT_TOKEN", "Bearer token from credential create/rotate"],
+              ["AACT_HMAC_SECRET", "HMAC secret shown once on create/rotate"],
+              ["AACT_ENABLED", "Optional product kill switch on the origin"],
+            ],
+          },
+          {
+            type: "code",
+            language: "bash",
+            code: `AACT_ENABLED=true
+AACT_URL=http://localhost:18080
+AACT_TOKEN=aact_…
+AACT_HMAC_SECRET=…`,
+          },
+        ],
+      },
+      {
+        id: "external-hook",
+        title: "Hook on the external site",
+        blocks: [
+          {
+            type: "list",
+            ordered: true,
+            items: [
+              "Persist paid state after PSP confirmation in the origin DB",
+              "Run local side-effects (ledger, fiscal, …)",
+              "Queue a job that POSTs a signed sale to /api/v1/integration/events",
+              "On refunds, enqueue a separate event with related_external_event_id",
+            ],
+          },
+          {
+            type: "callout",
+            tone: "info",
+            title: "Do not block payment confirmation",
+            text: "If AACT is temporarily unavailable, retry later with the same external_event_id. Never reverse an already-paid origin sale solely because AACT failed.",
+          },
+          {
+            type: "paragraph",
+            text: "Copy-paste PHP and TypeScript client + notifier examples: /docs/integrations/client. Repository deep-dive: docs/integrations/external-hook.md.",
+          },
+          {
+            type: "linkList",
+            items: [
+              {
+                href: "/docs/integrations/client",
+                label: "Client & notifier",
+                description: "Minimal PHP and TypeScript helpers",
+              },
+            ],
+          },
+        ],
+      },
+      {
         id: "example",
         title: "Local example",
         blocks: [
@@ -170,6 +234,70 @@ node examples/node-checkout/post-sale.mjs`,
               "Criar regra de comissão para esse website",
               "Criar credencial de integração (exige step-up) e guardar token + hmac_secret (mostrados uma vez)",
               "Usar um source estável como node_checkout",
+            ],
+          },
+        ],
+      },
+      {
+        id: "origin-env",
+        title: "Ambiente no site de origem",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Configure o backend do site externo (nunca o browser) com o URL do gateway AACT e os segredos da credencial em Admin → Integrations.",
+          },
+          {
+            type: "table",
+            headers: ["Variável", "Função"],
+            rows: [
+              ["AACT_URL", "URL base do gateway AACT (demo local: http://localhost:18080)"],
+              ["AACT_TOKEN", "Bearer token do create/rotate da credencial"],
+              ["AACT_HMAC_SECRET", "Segredo HMAC mostrado uma vez no create/rotate"],
+              ["AACT_ENABLED", "Kill switch opcional no produto de origem"],
+            ],
+          },
+          {
+            type: "code",
+            language: "bash",
+            code: `AACT_ENABLED=true
+AACT_URL=http://localhost:18080
+AACT_TOKEN=aact_…
+AACT_HMAC_SECRET=…`,
+          },
+        ],
+      },
+      {
+        id: "external-hook",
+        title: "Hook no site externo",
+        blocks: [
+          {
+            type: "list",
+            ordered: true,
+            items: [
+              "Persistir estado paid após confirmação do PSP na BD de origem",
+              "Correr side-effects locais (ledger, fiscal, …)",
+              "Enfileirar um job que faz POST assinado para /api/v1/integration/events",
+              "Em refunds, enfileirar um evento separado com related_external_event_id",
+            ],
+          },
+          {
+            type: "callout",
+            tone: "info",
+            title: "Não bloquear a confirmação de pagamento",
+            text: "Se a AACT estiver temporariamente indisponível, faça retry mais tarde com o mesmo external_event_id. Nunca reverta uma venda já paga na origem só porque a AACT falhou.",
+          },
+          {
+            type: "paragraph",
+            text: "Exemplos copy-paste PHP e TypeScript de client + notifier: /docs/integrations/client. Deep-dive no repositório: docs/integrations/external-hook.md.",
+          },
+          {
+            type: "linkList",
+            items: [
+              {
+                href: "/docs/integrations/client",
+                label: "Cliente e notifier",
+                description: "Helpers mínimos em PHP e TypeScript",
+              },
             ],
           },
         ],

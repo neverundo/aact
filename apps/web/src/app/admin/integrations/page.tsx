@@ -4,12 +4,20 @@ import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
+import { PromptForm } from "@/components/shell/PromptForm";
 import { useShell } from "@/components/shell/ShellProvider";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import { fetchMe } from "@/lib/auth";
 import { formatDateTime, type AppLocale } from "@/lib/locale";
+
+async function stepUpWithPassword(password: string): Promise<void> {
+  await apiFetch("/api/v1/auth/step-up", {
+    method: "POST",
+    body: JSON.stringify({ method: "password", password }),
+  });
+}
 
 type Business = { id: number; name: string };
 type Website = { id: number; name: string; business_id: number };
@@ -126,19 +134,32 @@ function AdminIntegrationsInner() {
     });
   }
 
-  async function rotate(id: number) {
-    setError(null);
-    try {
-      const response = await apiFetch<{
-        token: string;
-        hmac_secret: string;
-      }>(`/api/v1/admin/integrations/${id}/rotate`, { method: "POST" });
-      setSecrets({ token: response.token, hmac: response.hmac_secret });
-      setMessage(t("rotated"));
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("rotateFailed"));
-    }
+  function openRotateDrawer(id: number) {
+    openDrawer({
+      id: `rotate-integration-${id}`,
+      title: t("rotateDrawerTitle"),
+      description: t("rotateDrawerDescription"),
+      content: (
+        <PromptForm
+          label={t("password")}
+          submitLabel={t("rotateSubmit")}
+          inputType="password"
+          onCancel={closeDrawer}
+          onSubmit={async (password) => {
+            await stepUpWithPassword(password);
+            const response = await apiFetch<{
+              token: string;
+              hmac_secret: string;
+            }>(`/api/v1/admin/integrations/${id}/rotate`, { method: "POST" });
+            setSecrets({ token: response.token, hmac: response.hmac_secret });
+            setMessage(t("rotated"));
+            setError(null);
+            closeDrawer();
+            await load();
+          }}
+        />
+      ),
+    });
   }
 
   async function revoke(id: number) {
@@ -252,7 +273,7 @@ function AdminIntegrationsInner() {
                     <button
                       type="button"
                       className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                      onClick={() => rotate(item.id)}
+                      onClick={() => openRotateDrawer(item.id)}
                     >
                       {t("rotate")}
                     </button>
@@ -321,6 +342,7 @@ function CreateIntegrationForm({
   const [sourcePreset, setSourcePreset] = useState<string>("node_checkout");
   const [customSource, setCustomSource] = useState("");
   const [name, setName] = useState("Checkout");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -341,6 +363,7 @@ function CreateIntegrationForm({
     setLocalError(null);
     setLoading(true);
     try {
+      await stepUpWithPassword(password);
       const response = await apiFetch<{
         token: string;
         hmac_secret: string;
@@ -440,6 +463,18 @@ function CreateIntegrationForm({
           required
         />
       </label>
+      <label className="flex flex-col gap-1 text-sm">
+        {t("password")}
+        <input
+          type="password"
+          className="rounded-md border border-stone-300 px-3 py-2"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+          required
+        />
+      </label>
+      <p className="text-xs text-stone-500">{t("stepUpHint")}</p>
       {localError ? (
         <p className="text-sm text-red-700" role="alert">
           {localError}

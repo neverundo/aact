@@ -65,17 +65,19 @@
       "title": "Integrações",
       "summary": "Credenciais bearer + HMAC por business/website/source para ingestão de eventos de checkout externo.",
       "actions": [
-        "Criar credencial (source estável, ex. node_checkout).",
-        "Rodar ou revogar credenciais.",
+        "Criar credencial (source estável, ex. node_checkout) com palavra-passe de step-up.",
+        "Rodar ou revogar credenciais (rodar também exige step-up).",
         "Consultar o guia “Como integrar”."
       ],
       "prerequisites": [
         "Business e website existentes.",
-        "Source único por business."
+        "Source único por business.",
+        "Palavra-passe de admin para step-up em criar/rodar."
       ],
       "pitfalls": [
         "Token e HMAC só aparecem na criação/rotação.",
-        "Source não é um runtime: é o identificador do canal (idempotência)."
+        "Source não é um runtime: é o identificador do canal (idempotência).",
+        "Criar/rodar falham com step_up_required até confirmar a palavra-passe."
       ],
       "docsHref": "/docs/integrations/checkout.md"
     },
@@ -114,7 +116,7 @@
   },
   "portal": {
     "home": {
-      "title": "Portal do referrer",
+      "title": "Portal do Parceiro",
       "summary": "Área do referrer: memberships, método de pagamento, documentos, saldos, payouts e códigos de referral.",
       "actions": [
         "Submeter IBAN/MB Way.",

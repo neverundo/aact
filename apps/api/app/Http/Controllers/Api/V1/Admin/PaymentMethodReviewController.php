@@ -26,8 +26,9 @@ class PaymentMethodReviewController extends Controller
             $query->whereIn('business_id', $user->accessibleBusinessIds());
         }
 
-        if ($request->filled('status') && $request->string('status') !== 'all') {
-            $query->where('status', $request->string('status'));
+        $status = $request->input('status');
+        if (is_string($status) && $status !== '' && $status !== 'all') {
+            $query->where('status', $status);
         }
 
         if ($request->filled('business_id')) {

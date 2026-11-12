@@ -5,6 +5,7 @@ import { getEventsPage } from "./pages/events";
 import { getGettingStartedPage } from "./pages/getting-started";
 import { getIdempotencyPage } from "./pages/idempotency";
 import { getIntegrationAuthPage } from "./pages/integration-auth";
+import { getIntegrationClientPage } from "./pages/integration-client";
 import { getIntegrationsHubPage } from "./pages/integrations-hub";
 import { getOperationsPage } from "./pages/operations";
 import { getOverviewPage } from "./pages/overview";
@@ -18,6 +19,7 @@ const loaders: Record<string, (locale: DocLocale) => DocPage> = {
   "/docs/integrations/checkout": getCheckoutPage,
   "/docs/integrations/events": getEventsPage,
   "/docs/integrations/authentication": getIntegrationAuthPage,
+  "/docs/integrations/client": getIntegrationClientPage,
   "/docs/integrations/idempotency": getIdempotencyPage,
   "/docs/integrations/refunds": getRefundsPage,
   "/docs/api": getApiPage,

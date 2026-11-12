@@ -27,6 +27,7 @@
     "inactive": "inativo",
     "none": "—",
     "help": "Ajuda",
+    "hideHelp": "Ocultar ajuda",
     "helpTitle": "Ajuda · {title}",
     "helpActions": "Ações neste ecrã",
     "helpPrerequisites": "Pré-requisitos",

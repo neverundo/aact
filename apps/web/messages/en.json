@@ -27,6 +27,7 @@
     "inactive": "inactive",
     "none": "—",
     "help": "Help",
+    "hideHelp": "Hide help",
     "helpTitle": "Help · {title}",
     "helpActions": "Actions on this screen",
     "helpPrerequisites": "Prerequisites",

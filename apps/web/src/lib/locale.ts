@@ -70,3 +70,37 @@ export function formatDateTime(
   const date = value instanceof Date ? value : new Date(value);
   return date.toLocaleString(intlLocaleByAppLocale[locale]);
 }
+
+function currencyFractionDigits(currency: string, intlLocale: string): number {
+  try {
+    return (
+      new Intl.NumberFormat(intlLocale, {
+        style: "currency",
+        currency,
+      }).resolvedOptions().maximumFractionDigits ?? 2
+    );
+  } catch {
+    return 2;
+  }
+}
+
+/** Format ledger minor units (e.g. cents) as a localized currency string. */
+export function formatMoney(
+  amountMinor: number,
+  currency: string,
+  locale: AppLocale = getAppLocale(),
+): string {
+  const intlLocale = intlLocaleByAppLocale[locale];
+  const code = (currency || "EUR").toUpperCase();
+  const digits = currencyFractionDigits(code, intlLocale);
+  const major = amountMinor / 10 ** digits;
+
+  try {
+    return new Intl.NumberFormat(intlLocale, {
+      style: "currency",
+      currency: code,
+    }).format(major);
+  } catch {
+    return `${major.toFixed(digits)} ${code}`;
+  }
+}

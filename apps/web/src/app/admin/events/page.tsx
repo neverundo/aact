@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge, toneForStatus } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import { fetchMe } from "@/lib/auth";
+import { formatMoney, type AppLocale } from "@/lib/locale";
 
 type EventRow = {
   id: number;
@@ -24,9 +25,11 @@ type EventRow = {
 
 export default function AdminEventsPage() {
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
   const t = useTranslations("admin.events");
   const tCommon = useTranslations("common");
   const tEnums = useTranslations("enums.commercialEventStatus");
+  const tEventType = useTranslations("enums.eventType");
   const [events, setEvents] = useState<EventRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,16 +93,25 @@ export default function AdminEventsPage() {
               </div>
               <p className="text-stone-500">
                 {t("line", {
-                  eventType: event.event_type,
-                  amount: event.amount_minor,
-                  currency: event.currency,
+                  eventType: tEventType.has(event.event_type)
+                    ? tEventType(event.event_type)
+                    : event.event_type,
+                  amount: formatMoney(
+                    event.amount_minor,
+                    event.currency,
+                    locale,
+                  ),
                 })}
                 {event.referral_code
                   ? t("withRef", { code: event.referral_code })
                   : ""}
                 {event.commission
                   ? t("withCommission", {
-                      amount: event.commission.commission_minor,
+                      amount: formatMoney(
+                        event.commission.commission_minor,
+                        event.currency,
+                        locale,
+                      ),
                     })
                   : ""}
               </p>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { PromptForm } from "@/components/shell/PromptForm";
 import { useShell } from "@/components/shell/ShellProvider";
@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge, toneForStatus } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import { fetchMe } from "@/lib/auth";
+import { formatMoney, type AppLocale } from "@/lib/locale";
 
 type PayoutRequest = {
   id: number;
@@ -34,6 +35,7 @@ type PayoutRequest = {
 
 export default function AdminPayoutRequestsPage() {
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
   const { openDrawer, closeDrawer } = useShell();
   const t = useTranslations("admin.payoutRequests");
   const tCommon = useTranslations("common");
@@ -178,8 +180,11 @@ export default function AdminPayoutRequestsPage() {
                       <p className="font-medium text-stone-900">
                         {t("amountLine", {
                           id: item.id,
-                          amount: item.amount_minor,
-                          code: item.currency,
+                          amount: formatMoney(
+                            item.amount_minor,
+                            item.currency,
+                            locale,
+                          ),
                         })}
                       </p>
                       <StatusBadge tone={toneForStatus(item.status)}>

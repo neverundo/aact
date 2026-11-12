@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { StatusBadge, toneForStatus } from "@/components/ui/StatusBadge";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { apiFetch } from "@/lib/api";
-import { formatDateTime, type AppLocale } from "@/lib/locale";
+import { formatDateTime, formatMoney, type AppLocale } from "@/lib/locale";
 import { navIcons } from "@/lib/navIcons";
 
 type Paginated<T> = {
@@ -114,6 +114,7 @@ export default function AdminHomePage() {
   const tRole = useTranslations("enums.membershipRole");
   const tMembershipStatus = useTranslations("enums.membershipStatus");
   const tEventStatus = useTranslations("enums.commercialEventStatus");
+  const tEventType = useTranslations("enums.eventType");
   const tPayoutStatus = useTranslations("enums.payoutRequestStatus");
   const [loading, setLoading] = useState(true);
   const [businesses, setBusinesses] = useState<CardState<BusinessRow>>(emptyCard);
@@ -300,8 +301,12 @@ export default function AdminHomePage() {
             {events.items.map((item) => (
               <AdminShortcutPreviewRow
                 key={item.id}
-                primary={`${item.event_type} · ${item.source}`}
-                secondary={`${item.amount_minor} ${item.currency}`}
+                primary={`${tEventType.has(item.event_type) ? tEventType(item.event_type) : item.event_type} · ${item.source}`}
+                secondary={formatMoney(
+                  item.amount_minor,
+                  item.currency,
+                  locale,
+                )}
                 badge={
                   <StatusBadge tone={toneForStatus(item.status)}>
                     {tEventStatus.has(item.status)
@@ -327,7 +332,11 @@ export default function AdminHomePage() {
             {payouts.items.map((item) => (
               <AdminShortcutPreviewRow
                 key={item.id}
-                primary={`${item.amount_minor} ${item.currency}`}
+                primary={formatMoney(
+                  item.amount_minor,
+                  item.currency,
+                  locale,
+                )}
                 secondary={item.business?.name ?? tCommon("business")}
                 badge={
                   <StatusBadge tone={toneForStatus(item.status)}>

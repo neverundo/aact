@@ -286,7 +286,7 @@
       "description": "Ingestão idempotente por (business, source, external_event_id).",
       "emptyTitle": "Sem eventos",
       "emptyDescription": "Eventos comerciais ingeridos via integração aparecem aqui.",
-      "line": "{eventType} · {amount} {currency}",
+      "line": "{eventType} · {amount}",
       "withRef": " · ref {code}",
       "withCommission": " · comissão {amount}"
     },
@@ -457,7 +457,7 @@
       "markPaidPlaceholder": "SEPA-…",
       "documents": "Docs: {documents}",
       "businessFallback": "business #{id}",
-      "amountLine": "#{id} · {amount} {code}"
+      "amountLine": "#{id} · {amount}"
     },
     "security": {
       "title": "Segurança da conta",
@@ -502,9 +502,9 @@
       "emptyMembershipsDescription": "Aceite um convite para começar.",
       "balancesTitle": "Saldos e comissões",
       "emptyBalances": "Sem saldo ledger ainda",
-      "balanceLine": "{name}: {amount} {code} disponível (pagável {payable}, reservado {reserved}; limiar {count})",
+      "balanceLine": "{name}: {amount} disponível (pagável {payable}, reservado {reserved}; limiar {count})",
       "emptyCommissions": "Sem comissões",
-      "commissionLine": "#{id} · {amount} {code} · {title} (base {payments}{documents})",
+      "commissionLine": "#{id} · {amount} · {title} (base {payments}{documents})",
       "commissionReversed": "; revertido {amount}"
     },
     "payment": {
@@ -611,6 +611,11 @@
       "received": "Recebido",
       "attributed": "Atribuído",
       "ignored": "Ignorado"
+    },
+    "eventType": {
+      "sale": "Venda",
+      "refund": "Reembolso",
+      "chargeback": "Chargeback"
     },
     "documentScanStatus": {
       "quarantine": "Quarentena",

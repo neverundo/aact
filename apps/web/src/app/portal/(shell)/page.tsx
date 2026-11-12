@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { useShell } from "@/components/shell/ShellProvider";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -15,6 +15,7 @@ import {
   liveValidateIban,
   normalizeIban,
 } from "@/lib/iban";
+import { formatMoney, type AppLocale } from "@/lib/locale";
 
 type Membership = {
   id: number;
@@ -110,6 +111,7 @@ async function fetchPortalSnapshot() {
 export default function PortalHomePage() {
   const router = useRouter();
   const { openDrawer, closeDrawer } = useShell();
+  const locale = useLocale() as AppLocale;
   const t = useTranslations("portal.home");
   const tPayment = useTranslations("portal.payment");
   const tDocuments = useTranslations("portal.documents");
@@ -448,18 +450,36 @@ export default function PortalHomePage() {
           <EmptyState title={t("emptyBalances")} />
         ) : (
           <ul className="space-y-1 text-sm text-stone-600">
-            {balances.map((balance) => (
-              <li key={balance.membership_id}>
-                {t("balanceLine", {
-                  name: balance.business_name ?? `#${balance.membership_id}`,
-                  amount: balance.available_minor,
-                  payable: balance.payable_minor,
-                  reserved: balance.reserved_minor,
-                  code: balance.currency ?? "",
-                  count: balance.payout_threshold_minor,
-                })}
-              </li>
-            ))}
+            {balances.map((balance) => {
+              const currency = balance.currency ?? "EUR";
+              return (
+                <li key={balance.membership_id}>
+                  {t("balanceLine", {
+                    name: balance.business_name ?? `#${balance.membership_id}`,
+                    amount: formatMoney(
+                      balance.available_minor,
+                      currency,
+                      locale,
+                    ),
+                    payable: formatMoney(
+                      balance.payable_minor,
+                      currency,
+                      locale,
+                    ),
+                    reserved: formatMoney(
+                      balance.reserved_minor,
+                      currency,
+                      locale,
+                    ),
+                    count: formatMoney(
+                      balance.payout_threshold_minor,
+                      currency,
+                      locale,
+                    ),
+                  })}
+                </li>
+              );
+            })}
           </ul>
         )}
         {commissions.length === 0 ? (
@@ -470,13 +490,24 @@ export default function PortalHomePage() {
               <li key={commission.id} className="py-2">
                 {t("commissionLine", {
                   id: commission.id,
-                  amount: commission.commission_minor,
-                  code: commission.currency,
+                  amount: formatMoney(
+                    commission.commission_minor,
+                    commission.currency,
+                    locale,
+                  ),
                   title: commission.status,
-                  payments: commission.basis_amount_minor,
+                  payments: formatMoney(
+                    commission.basis_amount_minor,
+                    commission.currency,
+                    locale,
+                  ),
                   documents: commission.reversed_minor
                     ? t("commissionReversed", {
-                        amount: commission.reversed_minor,
+                        amount: formatMoney(
+                          commission.reversed_minor,
+                          commission.currency,
+                          locale,
+                        ),
                       })
                     : "",
                 })}
@@ -517,7 +548,12 @@ export default function PortalHomePage() {
                     className="flex flex-wrap items-center gap-2 py-2"
                   >
                     <span>
-                      #{payout.id} · {payout.amount_minor} {payout.currency}
+                      #{payout.id} ·{" "}
+                      {formatMoney(
+                        payout.amount_minor,
+                        payout.currency,
+                        locale,
+                      )}
                     </span>
                     <StatusBadge tone={toneForStatus(payout.status)}>
                       {statusLabel}

@@ -44,6 +44,7 @@ function AdminCommissionRulesInner() {
   const { openDrawer, closeDrawer } = useShell();
   const t = useTranslations("admin.commissionRules");
   const tCommon = useTranslations("common");
+  const tEventType = useTranslations("enums.eventType");
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [websites, setWebsites] = useState<Website[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
@@ -196,7 +197,9 @@ function AdminCommissionRulesInner() {
                     </p>
                     <p className="text-stone-500">
                       {t("details", {
-                        eventType: rule.event_type,
+                        eventType: tEventType.has(rule.event_type)
+                          ? tEventType(rule.event_type)
+                          : rule.event_type,
                         amount: rule.rate_bps,
                         flat: rule.flat_minor
                           ? t("flatSuffix", { amount: rule.flat_minor })

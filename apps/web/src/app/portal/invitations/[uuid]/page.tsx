@@ -107,11 +107,12 @@ function InvitationAcceptForm() {
     }
   }
 
-  const submitLabel = busy
-    ? t("processing")
-    : mode === "accept"
-      ? t("accept")
-      : t("registerAndAccept");
+  let submitLabel = t("registerAndAccept");
+  if (busy) {
+    submitLabel = t("processing");
+  } else if (mode === "accept") {
+    submitLabel = t("accept");
+  }
 
   return (
     <>

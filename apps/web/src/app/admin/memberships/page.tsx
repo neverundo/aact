@@ -72,10 +72,11 @@ export default function AdminMembershipsPage() {
     if (statusFilter) params.set("status", statusFilter);
     if (businessFilter !== "") params.set("business_id", String(businessFilter));
     const query = params.toString();
+    const membershipsPath = query
+      ? `/api/v1/admin/memberships?${query}`
+      : "/api/v1/admin/memberships";
     const [list, biz] = await Promise.all([
-      apiFetch<{ data: Membership[] }>(
-        `/api/v1/admin/memberships${query ? `?${query}` : ""}`,
-      ),
+      apiFetch<{ data: Membership[] }>(membershipsPath),
       apiFetch<{ data: Business[] }>("/api/v1/admin/businesses"),
     ]);
     setMemberships(list.data);
@@ -326,122 +327,168 @@ export default function AdminMembershipsPage() {
       ) : null}
       {message ? <p className="text-sm text-emerald-800">{message}</p> : null}
 
-      {loading ? (
-        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
-      ) : memberships.length === 0 && !error ? (
-        <EmptyState
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-        />
-      ) : (
-        <ul className="divide-y divide-stone-200 border-y border-stone-200">
-          {memberships.map((membership) => {
-            const memberLabel =
-              membership.user?.name ??
-              membership.user?.email ??
-              t("membershipFallback", { id: membership.id });
-            const websiteNames =
-              membership.websites?.map((w) => w.name).join(", ") ||
-              tCommon("noWebsites");
-            const roleLabel = tRole.has(membership.role)
-              ? tRole(membership.role)
-              : membership.role;
-            const statusLabel = tStatus.has(membership.status)
-              ? tStatus(membership.status)
-              : membership.status;
-            const payments =
-              (membership.payment_methods ?? [])
-                .map(
-                  (p) =>
-                    `v${p.version}:${tPmStatus.has(p.status) ? tPmStatus(p.status) : p.status}`,
-                )
-                .join(", ") || tCommon("noneListed");
+      <MembershipsContent
+        loading={loading}
+        error={error}
+        memberships={memberships}
+        onDetail={openDetailDrawer}
+        onApprove={approve}
+        onReject={openRejectDrawer}
+        onSuspend={openSuspendDrawer}
+      />
+    </div>
+  );
+}
 
-            return (
-              <li key={membership.id} className="space-y-2 py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        className="text-left font-medium text-stone-900 underline-offset-2 hover:underline"
-                        onClick={() => openDetailDrawer(membership)}
-                      >
-                        {memberLabel}
-                      </button>
-                      <StatusBadge tone={toneForStatus(membership.status)}>
-                        {statusLabel}
-                      </StatusBadge>
-                    </div>
-                    <p className="text-sm text-stone-500">
-                      {t("metaLine", {
-                        email: membership.user?.email ?? tCommon("noEmail"),
-                        name: membership.business?.name ?? tCommon("none"),
-                        code: roleLabel,
-                        title: websiteNames,
-                      })}
-                    </p>
-                    {membership.status_reason ? (
-                      <p className="text-sm text-stone-500">
-                        {membership.status_reason}
-                      </p>
-                    ) : null}
-                    <p className="text-sm text-stone-500">
-                      {t("paymentsLine", { payments })}
-                    </p>
-                    {(membership.referral_codes?.length ?? 0) > 0 ? (
-                      <p className="text-sm text-stone-500">
-                        {t("codesLine", {
-                          codes:
-                            membership.referral_codes
-                              ?.map((c) => c.code)
-                              .join(", ") ?? "",
-                        })}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+function paymentStatusFragment(
+  version: number,
+  status: string,
+  tPmStatus: { has: (key: string) => boolean; (key: string): string },
+): string {
+  const statusLabel = tPmStatus.has(status) ? tPmStatus(status) : status;
+  return `v${version}:${statusLabel}`;
+}
+
+function MembershipsContent({
+  loading,
+  error,
+  memberships,
+  onDetail,
+  onApprove,
+  onReject,
+  onSuspend,
+}: Readonly<{
+  loading: boolean;
+  error: string | null;
+  memberships: Membership[];
+  onDetail: (membership: Membership) => void;
+  onApprove: (id: number) => void;
+  onReject: (id: number) => void;
+  onSuspend: (id: number) => void;
+}>) {
+  const t = useTranslations("admin.memberships");
+  const tCommon = useTranslations("common");
+  const tStatus = useTranslations("enums.membershipStatus");
+  const tRole = useTranslations("enums.membershipRole");
+  const tPmStatus = useTranslations("enums.paymentMethodStatus");
+
+  if (loading) {
+    return <p className="text-sm text-stone-500">{tCommon("loading")}</p>;
+  }
+
+  if (memberships.length === 0 && !error) {
+    return (
+      <EmptyState
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+      />
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-stone-200 border-y border-stone-200">
+      {memberships.map((membership) => {
+        const memberLabel =
+          membership.user?.name ??
+          membership.user?.email ??
+          t("membershipFallback", { id: membership.id });
+        const websiteNames =
+          membership.websites?.map((w) => w.name).join(", ") ||
+          tCommon("noWebsites");
+        const roleLabel = tRole.has(membership.role)
+          ? tRole(membership.role)
+          : membership.role;
+        const statusLabel = tStatus.has(membership.status)
+          ? tStatus(membership.status)
+          : membership.status;
+        const payments =
+          (membership.payment_methods ?? [])
+            .map((p) => paymentStatusFragment(p.version, p.status, tPmStatus))
+            .join(", ") || tCommon("noneListed");
+
+        return (
+          <li key={membership.id} className="space-y-2 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className="text-left font-medium text-stone-900 underline-offset-2 hover:underline"
+                    onClick={() => onDetail(membership)}
+                  >
+                    {memberLabel}
+                  </button>
+                  <StatusBadge tone={toneForStatus(membership.status)}>
+                    {statusLabel}
+                  </StatusBadge>
+                </div>
+                <p className="text-sm text-stone-500">
+                  {t("metaLine", {
+                    email: membership.user?.email ?? tCommon("noEmail"),
+                    name: membership.business?.name ?? tCommon("none"),
+                    code: roleLabel,
+                    title: websiteNames,
+                  })}
+                </p>
+                {membership.status_reason ? (
+                  <p className="text-sm text-stone-500">
+                    {membership.status_reason}
+                  </p>
+                ) : null}
+                <p className="text-sm text-stone-500">
+                  {t("paymentsLine", { payments })}
+                </p>
+                {(membership.referral_codes?.length ?? 0) > 0 ? (
+                  <p className="text-sm text-stone-500">
+                    {t("codesLine", {
+                      codes:
+                        membership.referral_codes
+                          ?.map((c) => c.code)
+                          .join(", ") ?? "",
+                    })}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                  onClick={() => onDetail(membership)}
+                >
+                  {tCommon("detail")}
+                </button>
+                {membership.status === "pending" ? (
+                  <>
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-700"
+                      onClick={() => onApprove(membership.id)}
+                    >
+                      {tCommon("approve")}
+                    </button>
                     <button
                       type="button"
                       className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                      onClick={() => openDetailDrawer(membership)}
+                      onClick={() => onReject(membership.id)}
                     >
-                      {tCommon("detail")}
+                      {tCommon("reject")}
                     </button>
-                    {membership.status === "pending" ? (
-                      <>
-                        <button
-                          type="button"
-                          className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-700"
-                          onClick={() => approve(membership.id)}
-                        >
-                          {tCommon("approve")}
-                        </button>
-                        <button
-                          type="button"
-                          className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                          onClick={() => openRejectDrawer(membership.id)}
-                        >
-                          {tCommon("reject")}
-                        </button>
-                      </>
-                    ) : null}
-                    {membership.status === "approved" ? (
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                        onClick={() => openSuspendDrawer(membership.id)}
-                      >
-                        {tCommon("suspend")}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+                  </>
+                ) : null}
+                {membership.status === "approved" ? (
+                  <button
+                    type="button"
+                    className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                    onClick={() => onSuspend(membership.id)}
+                  >
+                    {tCommon("suspend")}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

@@ -34,6 +34,66 @@ function brandInitials(name: string): string {
   return `${words[0]!.slice(0, 1)}${words[1]!.slice(0, 1)}`.toUpperCase();
 }
 
+function SidebarBrandGlyph({
+  logoSrc,
+  railMode,
+  initials,
+}: {
+  logoSrc?: string | null;
+  railMode: boolean;
+  initials: string;
+}) {
+  if (logoSrc) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoSrc}
+        alt=""
+        className={[
+          "shrink-0 rounded object-contain",
+          railMode ? "h-7 w-7" : "h-9 w-9",
+        ].join(" ")}
+      />
+    );
+  }
+
+  if (!railMode) return null;
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-7 w-7 items-center justify-center text-xs font-semibold tracking-wide"
+    >
+      {initials}
+    </span>
+  );
+}
+
+function SidebarBrandWords({
+  words,
+  logoSrc,
+}: {
+  words: string[];
+  logoSrc?: string | null;
+}) {
+  return (
+    <span
+      className={[
+        "flex min-w-0 flex-col font-semibold tracking-[0.16em] uppercase",
+        logoSrc
+          ? "h-9 justify-center gap-0.5 text-xs leading-none"
+          : "gap-0.5 text-sm leading-none",
+      ].join(" ")}
+    >
+      {words.map((word, index) => (
+        <span key={`${word}-${index}`} className="truncate">
+          {word}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function Sidebar({
   groups,
   homeHref,
@@ -56,6 +116,9 @@ export function Sidebar({
   const logoSrc = brand?.logoSrc ?? portalBrand.logoUrl;
   const words = brandWords(markLabel);
   const initials = brandInitials(markLabel);
+  const brandColor = portalBrand.accent
+    ? { color: "var(--brand-primary, #1c1917)" }
+    : undefined;
 
   return (
     <>
@@ -94,46 +157,15 @@ export function Sidebar({
             ].join(" ")}
             onClick={() => setMobileOpen(false)}
             aria-label={markLabel}
-            style={
-              portalBrand.accent
-                ? { color: "var(--brand-primary, #1c1917)" }
-                : undefined
-            }
+            style={brandColor}
           >
-            {logoSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoSrc}
-                alt=""
-                className={[
-                  "shrink-0 rounded object-contain",
-                  railMode ? "h-7 w-7" : "h-9 w-9",
-                ].join(" ")}
-              />
-            ) : railMode ? (
-              <span
-                aria-hidden="true"
-                className="flex h-7 w-7 items-center justify-center text-xs font-semibold tracking-wide"
-              >
-                {initials}
-              </span>
-            ) : null}
-
+            <SidebarBrandGlyph
+              logoSrc={logoSrc}
+              railMode={railMode}
+              initials={initials}
+            />
             {!railMode ? (
-              <span
-                className={[
-                  "flex min-w-0 flex-col font-semibold tracking-[0.16em] uppercase",
-                  logoSrc
-                    ? "h-9 justify-center gap-0.5 text-xs leading-none"
-                    : "gap-0.5 text-sm leading-none",
-                ].join(" ")}
-              >
-                {words.map((word, index) => (
-                  <span key={`${word}-${index}`} className="truncate">
-                    {word}
-                  </span>
-                ))}
-              </span>
+              <SidebarBrandWords words={words} logoSrc={logoSrc} />
             ) : null}
           </Link>
           {!railMode ? (

@@ -39,8 +39,6 @@ export default function AdminPayoutRequestsPage() {
   const { openDrawer, closeDrawer } = useShell();
   const t = useTranslations("admin.payoutRequests");
   const tCommon = useTranslations("common");
-  const tStatus = useTranslations("enums.payoutRequestStatus");
-  const tPmType = useTranslations("enums.paymentMethodType");
   const [items, setItems] = useState<PayoutRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -154,114 +152,158 @@ export default function AdminPayoutRequestsPage() {
       ) : null}
       {message ? <p className="text-sm text-emerald-800">{message}</p> : null}
 
-      {loading ? (
-        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
-      ) : items.length === 0 && !error ? (
-        <EmptyState
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-        />
-      ) : (
-        <ul className="divide-y divide-stone-200 border-y border-stone-200">
-          {items.map((item) => {
-            const statusLabel = tStatus.has(item.status)
-              ? tStatus(item.status)
-              : item.status;
-            const methodType = item.payment_method
-              ? tPmType.has(item.payment_method.method_type)
-                ? tPmType(item.payment_method.method_type)
-                : item.payment_method.method_type
-              : null;
-            return (
-              <li key={item.id} className="space-y-2 py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-stone-900">
-                        {t("amountLine", {
-                          id: item.id,
-                          amount: formatMoney(
-                            item.amount_minor,
-                            item.currency,
-                            locale,
-                          ),
-                        })}
-                      </p>
-                      <StatusBadge tone={toneForStatus(item.status)}>
-                        {statusLabel}
-                      </StatusBadge>
-                    </div>
-                    <p className="text-sm text-stone-600">
-                      {item.business?.name ??
-                        t("businessFallback", { id: item.business_id })}
-                      {item.payment_method && methodType
-                        ? ` · ${methodType} ${item.payment_method.display_mask}`
-                        : null}
-                    </p>
-                    {item.status_reason ? (
-                      <p className="text-sm text-stone-500">
-                        {item.status_reason}
-                      </p>
-                    ) : null}
-                    {item.external_reference ? (
-                      <p className="font-mono text-xs text-stone-500">
-                        {item.external_reference}
-                      </p>
-                    ) : null}
-                    {(item.documents ?? []).length > 0 ? (
-                      <p className="text-xs text-stone-500">
-                        {t("documents", {
-                          documents: (item.documents ?? [])
-                            .map((d) => d.original_filename)
-                            .join(", "),
-                        })}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex shrink-0 flex-col gap-2">
-                    {item.status === "pending" ? (
-                      <>
-                        <button
-                          type="button"
-                          className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white hover:bg-stone-700"
-                          onClick={() => approve(item.id)}
-                        >
-                          {tCommon("approve")}
-                        </button>
-                        <button
-                          type="button"
-                          className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
-                          onClick={() => openRejectDrawer(item.id)}
-                        >
-                          {tCommon("reject")}
-                        </button>
-                      </>
-                    ) : null}
-                    {item.status === "approved" ? (
-                      <>
-                        <button
-                          type="button"
-                          className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white hover:bg-stone-700"
-                          onClick={() => openMarkPaidDrawer(item.id)}
-                        >
-                          {t("markPaidSubmit")}
-                        </button>
-                        <button
-                          type="button"
-                          className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
-                          onClick={() => openRejectDrawer(item.id)}
-                        >
-                          {tCommon("reject")}
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <PayoutRequestsContent
+        loading={loading}
+        error={error}
+        items={items}
+        locale={locale}
+        onApprove={approve}
+        onReject={openRejectDrawer}
+        onMarkPaid={openMarkPaidDrawer}
+      />
     </div>
+  );
+}
+
+function payoutMethodTypeLabel(
+  paymentMethod: PayoutRequest["payment_method"],
+  tPmType: { has: (key: string) => boolean; (key: string): string },
+): string | null {
+  if (!paymentMethod) return null;
+  if (tPmType.has(paymentMethod.method_type)) {
+    return tPmType(paymentMethod.method_type);
+  }
+  return paymentMethod.method_type;
+}
+
+function PayoutRequestsContent({
+  loading,
+  error,
+  items,
+  locale,
+  onApprove,
+  onReject,
+  onMarkPaid,
+}: Readonly<{
+  loading: boolean;
+  error: string | null;
+  items: PayoutRequest[];
+  locale: AppLocale;
+  onApprove: (id: number) => void;
+  onReject: (id: number) => void;
+  onMarkPaid: (id: number) => void;
+}>) {
+  const t = useTranslations("admin.payoutRequests");
+  const tCommon = useTranslations("common");
+  const tStatus = useTranslations("enums.payoutRequestStatus");
+  const tPmType = useTranslations("enums.paymentMethodType");
+
+  if (loading) {
+    return <p className="text-sm text-stone-500">{tCommon("loading")}</p>;
+  }
+
+  if (items.length === 0 && !error) {
+    return (
+      <EmptyState
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+      />
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-stone-200 border-y border-stone-200">
+      {items.map((item) => {
+        const statusLabel = tStatus.has(item.status)
+          ? tStatus(item.status)
+          : item.status;
+        const methodType = payoutMethodTypeLabel(item.payment_method, tPmType);
+        return (
+          <li key={item.id} className="space-y-2 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium text-stone-900">
+                    {t("amountLine", {
+                      id: item.id,
+                      amount: formatMoney(
+                        item.amount_minor,
+                        item.currency,
+                        locale,
+                      ),
+                    })}
+                  </p>
+                  <StatusBadge tone={toneForStatus(item.status)}>
+                    {statusLabel}
+                  </StatusBadge>
+                </div>
+                <p className="text-sm text-stone-600">
+                  {item.business?.name ??
+                    t("businessFallback", { id: item.business_id })}
+                  {item.payment_method && methodType
+                    ? ` · ${methodType} ${item.payment_method.display_mask}`
+                    : null}
+                </p>
+                {item.status_reason ? (
+                  <p className="text-sm text-stone-500">{item.status_reason}</p>
+                ) : null}
+                {item.external_reference ? (
+                  <p className="font-mono text-xs text-stone-500">
+                    {item.external_reference}
+                  </p>
+                ) : null}
+                {(item.documents ?? []).length > 0 ? (
+                  <p className="text-xs text-stone-500">
+                    {t("documents", {
+                      documents: (item.documents ?? [])
+                        .map((d) => d.original_filename)
+                        .join(", "),
+                    })}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 flex-col gap-2">
+                {item.status === "pending" ? (
+                  <>
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white hover:bg-stone-700"
+                      onClick={() => onApprove(item.id)}
+                    >
+                      {tCommon("approve")}
+                    </button>
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
+                      onClick={() => onReject(item.id)}
+                    >
+                      {tCommon("reject")}
+                    </button>
+                  </>
+                ) : null}
+                {item.status === "approved" ? (
+                  <>
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-md bg-stone-900 px-3 py-1.5 text-sm text-white hover:bg-stone-700"
+                      onClick={() => onMarkPaid(item.id)}
+                    >
+                      {t("markPaidSubmit")}
+                    </button>
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
+                      onClick={() => onReject(item.id)}
+                    >
+                      {tCommon("reject")}
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

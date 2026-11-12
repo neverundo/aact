@@ -47,26 +47,66 @@ export function AdminShortcutCard({
           </span>
         </div>
 
-        {loading ? (
-          <p className="text-sm text-stone-500">{loadingLabel}</p>
-        ) : error ? (
-          <p className="text-sm text-red-700" role="alert">
-            {error}
-          </p>
-        ) : (
-          <div className="flex min-h-12 items-start gap-4">
-            <p className="shrink-0 text-3xl font-semibold tabular-nums tracking-tight text-stone-900">
-              {total ?? 0}
-            </p>
-            {hasPreview ? (
-              <div className="min-w-0 flex-1 divide-y divide-stone-100">{children}</div>
-            ) : total === 0 ? (
-              <p className="pt-2 text-sm text-stone-500">{emptyLabel}</p>
-            ) : null}
-          </div>
-        )}
+        <AdminShortcutCardBody
+          loading={loading}
+          error={error}
+          total={total}
+          hasPreview={hasPreview}
+          loadingLabel={loadingLabel}
+          emptyLabel={emptyLabel}
+        >
+          {children}
+        </AdminShortcutCardBody>
       </Link>
     </li>
+  );
+}
+
+function AdminShortcutCardBody({
+  loading,
+  error,
+  total,
+  hasPreview,
+  loadingLabel,
+  emptyLabel,
+  children,
+}: Readonly<{
+  loading: boolean;
+  error: string | null;
+  total: number | null;
+  hasPreview: boolean;
+  loadingLabel: string;
+  emptyLabel: string;
+  children?: ReactNode;
+}>) {
+  if (loading) {
+    return <p className="text-sm text-stone-500">{loadingLabel}</p>;
+  }
+
+  if (error) {
+    return (
+      <p className="text-sm text-red-700" role="alert">
+        {error}
+      </p>
+    );
+  }
+
+  let preview: ReactNode = null;
+  if (hasPreview) {
+    preview = (
+      <div className="min-w-0 flex-1 divide-y divide-stone-100">{children}</div>
+    );
+  } else if (total === 0) {
+    preview = <p className="pt-2 text-sm text-stone-500">{emptyLabel}</p>;
+  }
+
+  return (
+    <div className="flex min-h-12 items-start gap-4">
+      <p className="shrink-0 text-3xl font-semibold tabular-nums tracking-tight text-stone-900">
+        {total ?? 0}
+      </p>
+      {preview}
+    </div>
   );
 }
 

@@ -119,9 +119,6 @@ export default function PortalHomePage() {
   const tReferral = useTranslations("portal.referral");
   const tCommon = useTranslations("common");
   const tMembershipStatus = useTranslations("enums.membershipStatus");
-  const tPmStatus = useTranslations("enums.paymentMethodStatus");
-  const tPmType = useTranslations("enums.paymentMethodType");
-  const tScanStatus = useTranslations("enums.documentScanStatus");
   const tPayoutStatus = useTranslations("enums.payoutRequestStatus");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -352,94 +349,12 @@ export default function PortalHomePage() {
       </section>
 
       {activeMembership ? (
-        <>
-          <section id="pagamento" className="scroll-mt-20 space-y-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-stone-900">
-                  {tPayment("title")}
-                </h2>
-                <p className="text-sm text-stone-600">
-                  {tPayment("description")}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
-                onClick={openPaymentDrawer}
-              >
-                {tPayment("submitVersion")}
-              </button>
-            </div>
-            {(activeMembership.payment_methods ?? []).length === 0 ? (
-              <EmptyState title={tPayment("empty")} />
-            ) : (
-              <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
-                {(activeMembership.payment_methods ?? []).map((pm) => {
-                  const typeLabel = tPmType.has(pm.method_type)
-                    ? tPmType(pm.method_type)
-                    : pm.method_type;
-                  const statusLabel = tPmStatus.has(pm.status)
-                    ? tPmStatus(pm.status)
-                    : pm.status;
-                  return (
-                    <li
-                      key={pm.id}
-                      className="flex flex-wrap items-center justify-between gap-2 py-3"
-                    >
-                      <span>
-                        v{pm.version} · {typeLabel} · {pm.display_mask}
-                      </span>
-                      <StatusBadge tone={toneForStatus(pm.status)}>
-                        {statusLabel}
-                      </StatusBadge>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-
-          <section id="documentos" className="scroll-mt-20 space-y-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <h2 className="text-lg font-semibold text-stone-900">
-                {tDocuments("title")}
-              </h2>
-              <button
-                type="button"
-                className="min-h-11 rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
-                onClick={openDocumentDrawer}
-              >
-                {tDocuments("send")}
-              </button>
-            </div>
-            {documents.length === 0 ? (
-              <EmptyState title={tDocuments("empty")} />
-            ) : (
-              <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
-                {documents.map((doc) => {
-                  const scanLabel = tScanStatus.has(doc.scan_status)
-                    ? tScanStatus(doc.scan_status)
-                    : doc.scan_status;
-                  return (
-                    <li
-                      key={doc.uuid}
-                      className="flex flex-wrap items-center justify-between gap-2 py-3"
-                    >
-                      <span>
-                        {doc.original_filename} · {doc.purpose}
-                      </span>
-                      <StatusBadge tone={toneForStatus(doc.scan_status)}>
-                        {scanLabel}
-                        {doc.usable ? tDocuments("usableSuffix") : ""}
-                      </StatusBadge>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-        </>
+        <PortalPaymentAndDocuments
+          membership={activeMembership}
+          documents={documents}
+          onOpenPayment={openPaymentDrawer}
+          onOpenDocuments={openDocumentDrawer}
+        />
       ) : null}
 
       <section id="saldos" className="scroll-mt-20 space-y-3">
@@ -627,6 +542,132 @@ export default function PortalHomePage() {
   );
 }
 
+function PortalPaymentAndDocuments({
+  membership,
+  documents,
+  onOpenPayment,
+  onOpenDocuments,
+}: {
+  membership: Membership;
+  documents: PortalDocument[];
+  onOpenPayment: () => void;
+  onOpenDocuments: () => void;
+}) {
+  const tPayment = useTranslations("portal.payment");
+  const tDocuments = useTranslations("portal.documents");
+  const tPmStatus = useTranslations("enums.paymentMethodStatus");
+  const tPmType = useTranslations("enums.paymentMethodType");
+  const tScanStatus = useTranslations("enums.documentScanStatus");
+  const paymentMethods = membership.payment_methods ?? [];
+
+  return (
+    <>
+      <section id="pagamento" className="scroll-mt-20 space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-stone-900">
+              {tPayment("title")}
+            </h2>
+            <p className="text-sm text-stone-600">{tPayment("description")}</p>
+          </div>
+          <button
+            type="button"
+            className="min-h-11 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
+            onClick={onOpenPayment}
+          >
+            {tPayment("submitVersion")}
+          </button>
+        </div>
+        {paymentMethods.length === 0 ? (
+          <EmptyState title={tPayment("empty")} />
+        ) : (
+          <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
+            {paymentMethods.map((pm) => {
+              const typeLabel = tPmType.has(pm.method_type)
+                ? tPmType(pm.method_type)
+                : pm.method_type;
+              const statusLabel = tPmStatus.has(pm.status)
+                ? tPmStatus(pm.status)
+                : pm.status;
+              return (
+                <li
+                  key={pm.id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-3"
+                >
+                  <span>
+                    v{pm.version} · {typeLabel} · {pm.display_mask}
+                  </span>
+                  <StatusBadge tone={toneForStatus(pm.status)}>
+                    {statusLabel}
+                  </StatusBadge>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section id="documentos" className="scroll-mt-20 space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h2 className="text-lg font-semibold text-stone-900">
+            {tDocuments("title")}
+          </h2>
+          <button
+            type="button"
+            className="min-h-11 rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
+            onClick={onOpenDocuments}
+          >
+            {tDocuments("send")}
+          </button>
+        </div>
+        {documents.length === 0 ? (
+          <EmptyState title={tDocuments("empty")} />
+        ) : (
+          <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
+            {documents.map((doc) => {
+              const scanLabel = tScanStatus.has(doc.scan_status)
+                ? tScanStatus(doc.scan_status)
+                : doc.scan_status;
+              return (
+                <li
+                  key={doc.uuid}
+                  className="flex flex-wrap items-center justify-between gap-2 py-3"
+                >
+                  <span>
+                    {doc.original_filename} · {doc.purpose}
+                  </span>
+                  <StatusBadge tone={toneForStatus(doc.scan_status)}>
+                    {scanLabel}
+                    {doc.usable ? tDocuments("usableSuffix") : ""}
+                  </StatusBadge>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </>
+  );
+}
+
+function ibanInputBorderClass(
+  methodType: "iban" | "mbway",
+  kind: ReturnType<typeof liveValidateIban>["kind"],
+): string {
+  if (methodType !== "iban" || kind === "empty") return "border-stone-300";
+  if (kind === "valid") return "border-emerald-600";
+  if (kind === "invalid") return "border-red-600";
+  return "border-stone-300";
+}
+
+function ibanStatusTextClass(
+  kind: ReturnType<typeof liveValidateIban>["kind"],
+): string {
+  if (kind === "valid") return "text-sm text-emerald-800";
+  if (kind === "invalid") return "text-sm text-red-700";
+  return "text-sm text-stone-500";
+}
+
 function PaymentForm({
   defaultHolderName,
   onSubmit,
@@ -650,22 +691,17 @@ function PaymentForm({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const ibanStatus = liveValidateIban(iban);
-  const ibanBorderClass =
-    methodType !== "iban" || ibanStatus.kind === "empty"
-      ? "border-stone-300"
-      : ibanStatus.kind === "valid"
-        ? "border-emerald-600"
-        : ibanStatus.kind === "invalid"
-          ? "border-red-600"
-          : "border-stone-300";
+  const ibanBorderClass = ibanInputBorderClass(methodType, ibanStatus.kind);
 
   async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setLocalError(null);
 
     if (methodType === "iban" && !isValidIban(iban)) {
+      const hasIbanMessage =
+        ibanStatus.kind === "invalid" || ibanStatus.kind === "incomplete";
       setLocalError(
-        ibanStatus.kind === "invalid" || ibanStatus.kind === "incomplete"
+        hasIbanMessage
           ? tIban(ibanStatus.messageKey, ibanStatus.values)
           : tIban("required"),
       );
@@ -725,13 +761,7 @@ function PaymentForm({
             <p
               id="portal-iban-status"
               role={ibanStatus.kind === "invalid" ? "alert" : "status"}
-              className={
-                ibanStatus.kind === "valid"
-                  ? "text-sm text-emerald-800"
-                  : ibanStatus.kind === "invalid"
-                    ? "text-sm text-red-700"
-                    : "text-sm text-stone-500"
-              }
+              className={ibanStatusTextClass(ibanStatus.kind)}
             >
               {tIban(ibanStatus.messageKey, ibanStatus.values)}
             </p>

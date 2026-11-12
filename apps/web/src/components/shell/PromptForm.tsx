@@ -49,7 +49,6 @@ export function PromptForm({
           value={value}
           placeholder={placeholder}
           required={required}
-          autoFocus
           onChange={(e) => setValue(e.target.value)}
         />
       </label>

@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 
 class BusinessBrandingController extends Controller
 {
+    private const HEX_COLOR_REGEX = 'regex:/^#[0-9A-Fa-f]{6}$/';
+
     public function __construct(private readonly BusinessBrandingService $branding) {}
 
     public function show(Request $request, Business $business): BusinessBrandingResource
@@ -37,9 +39,9 @@ class BusinessBrandingController extends Controller
 
         $validated = $request->validate([
             'display_name' => ['nullable', 'string', 'max:255'],
-            'primary_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'secondary_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'accent_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'primary_color' => ['required', 'string', self::HEX_COLOR_REGEX],
+            'secondary_color' => ['required', 'string', self::HEX_COLOR_REGEX],
+            'accent_color' => ['required', 'string', self::HEX_COLOR_REGEX],
         ]);
 
         return new BusinessBrandingResource(

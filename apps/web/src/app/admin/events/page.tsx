@@ -28,8 +28,6 @@ export default function AdminEventsPage() {
   const locale = useLocale() as AppLocale;
   const t = useTranslations("admin.events");
   const tCommon = useTranslations("common");
-  const tEnums = useTranslations("enums.commercialEventStatus");
-  const tEventType = useTranslations("enums.eventType");
   const [events, setEvents] = useState<EventRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,58 +68,86 @@ export default function AdminEventsPage() {
         </p>
       ) : null}
 
-      {loading ? (
-        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
-      ) : events.length === 0 && !error ? (
-        <EmptyState
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-        />
-      ) : (
-        <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
-          {events.map((event) => (
-            <li key={event.id} className="space-y-1 py-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium text-stone-900">
-                  {event.external_event_id} · {event.source}
-                </p>
-                <StatusBadge tone={toneForStatus(event.status)}>
-                  {tEnums.has(event.status)
-                    ? tEnums(event.status)
-                    : event.status}
-                </StatusBadge>
-              </div>
-              <p className="text-stone-500">
-                {t("line", {
-                  eventType: tEventType.has(event.event_type)
-                    ? tEventType(event.event_type)
-                    : event.event_type,
+      <EventsContent
+        loading={loading}
+        error={error}
+        events={events}
+        locale={locale}
+      />
+    </div>
+  );
+}
+
+function EventsContent({
+  loading,
+  error,
+  events,
+  locale,
+}: Readonly<{
+  loading: boolean;
+  error: string | null;
+  events: EventRow[];
+  locale: AppLocale;
+}>) {
+  const t = useTranslations("admin.events");
+  const tCommon = useTranslations("common");
+  const tEnums = useTranslations("enums.commercialEventStatus");
+  const tEventType = useTranslations("enums.eventType");
+
+  if (loading) {
+    return <p className="text-sm text-stone-500">{tCommon("loading")}</p>;
+  }
+
+  if (events.length === 0 && !error) {
+    return (
+      <EmptyState
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+      />
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
+      {events.map((event) => (
+        <li key={event.id} className="space-y-1 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-medium text-stone-900">
+              {event.external_event_id} · {event.source}
+            </p>
+            <StatusBadge tone={toneForStatus(event.status)}>
+              {tEnums.has(event.status) ? tEnums(event.status) : event.status}
+            </StatusBadge>
+          </div>
+          <p className="text-stone-500">
+            {t("line", {
+              eventType: tEventType.has(event.event_type)
+                ? tEventType(event.event_type)
+                : event.event_type,
+              amount: formatMoney(
+                event.amount_minor,
+                event.currency,
+                locale,
+              ),
+            })}
+            {event.referral_code
+              ? t("withRef", { code: event.referral_code })
+              : ""}
+            {event.commission
+              ? t("withCommission", {
                   amount: formatMoney(
-                    event.amount_minor,
+                    event.commission.commission_minor,
                     event.currency,
                     locale,
                   ),
-                })}
-                {event.referral_code
-                  ? t("withRef", { code: event.referral_code })
-                  : ""}
-                {event.commission
-                  ? t("withCommission", {
-                      amount: formatMoney(
-                        event.commission.commission_minor,
-                        event.currency,
-                        locale,
-                      ),
-                    })
-                  : ""}
-              </p>
-              {event.status_reason ? (
-                <p className="text-xs text-stone-500">{event.status_reason}</p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+                })
+              : ""}
+          </p>
+          {event.status_reason ? (
+            <p className="text-xs text-stone-500">{event.status_reason}</p>
+          ) : null}
+        </li>
+      ))}
+    </ul>
   );
 }

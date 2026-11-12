@@ -218,80 +218,115 @@ function AdminIntegrationsInner() {
         </pre>
       ) : null}
 
-      {loading ? (
-        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
-      ) : items.length === 0 && !error ? (
-        <EmptyState
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-          action={
-            <button
-              type="button"
-              className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
-              onClick={() => openCreateDrawer()}
-            >
-              {t("create")}
-            </button>
-          }
-        />
-      ) : (
-        <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
-          {items.map((item) => (
-            <li key={item.id} className="space-y-2 py-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-stone-900">
-                      {item.name} · {item.source}
-                    </p>
-                    <StatusBadge tone={item.revoked_at ? "danger" : "success"}>
-                      {item.revoked_at
-                        ? t("statusRevoked")
-                        : t("statusActive")}
-                    </StatusBadge>
-                  </div>
-                  <p className="text-stone-500">
-                    {t("businessWebsite", {
-                      name:
-                        item.business?.name ??
-                        t("businessFallback", { id: item.business_id }),
-                      title:
-                        item.website?.name ??
-                        t("websiteFallback", { id: item.website_id }),
-                    })}
-                  </p>
-                  <p className="text-stone-500">
-                    {item.last_used_at
-                      ? t("lastUsed", {
-                          date: formatDateTime(item.last_used_at, locale),
-                        })
-                      : t("neverUsed")}
-                  </p>
-                </div>
-                {!item.revoked_at ? (
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                      onClick={() => openRotateDrawer(item.id)}
-                    >
-                      {t("rotate")}
-                    </button>
-                    <button
-                      type="button"
-                      className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                      onClick={() => revoke(item.id)}
-                    >
-                      {t("revoke")}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <IntegrationsContent
+        loading={loading}
+        error={error}
+        items={items}
+        locale={locale}
+        onCreate={() => openCreateDrawer()}
+        onRotate={openRotateDrawer}
+        onRevoke={revoke}
+      />
     </div>
+  );
+}
+
+function IntegrationsContent({
+  loading,
+  error,
+  items,
+  locale,
+  onCreate,
+  onRotate,
+  onRevoke,
+}: Readonly<{
+  loading: boolean;
+  error: string | null;
+  items: Credential[];
+  locale: AppLocale;
+  onCreate: () => void;
+  onRotate: (id: number) => void;
+  onRevoke: (id: number) => void;
+}>) {
+  const t = useTranslations("admin.integrations");
+  const tCommon = useTranslations("common");
+
+  if (loading) {
+    return <p className="text-sm text-stone-500">{tCommon("loading")}</p>;
+  }
+
+  if (items.length === 0 && !error) {
+    return (
+      <EmptyState
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+        action={
+          <button
+            type="button"
+            className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
+            onClick={onCreate}
+          >
+            {t("create")}
+          </button>
+        }
+      />
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
+      {items.map((item) => (
+        <li key={item.id} className="space-y-2 py-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium text-stone-900">
+                  {item.name} · {item.source}
+                </p>
+                <StatusBadge tone={item.revoked_at ? "danger" : "success"}>
+                  {item.revoked_at ? t("statusRevoked") : t("statusActive")}
+                </StatusBadge>
+              </div>
+              <p className="text-stone-500">
+                {t("businessWebsite", {
+                  name:
+                    item.business?.name ??
+                    t("businessFallback", { id: item.business_id }),
+                  title:
+                    item.website?.name ??
+                    t("websiteFallback", { id: item.website_id }),
+                })}
+              </p>
+              <p className="text-stone-500">
+                {item.last_used_at
+                  ? t("lastUsed", {
+                      date: formatDateTime(item.last_used_at, locale),
+                    })
+                  : t("neverUsed")}
+              </p>
+            </div>
+            {!item.revoked_at ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                  onClick={() => onRotate(item.id)}
+                >
+                  {t("rotate")}
+                </button>
+                <button
+                  type="button"
+                  className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                  onClick={() => onRevoke(item.id)}
+                >
+                  {t("revoke")}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

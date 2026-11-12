@@ -169,13 +169,13 @@ class BusinessBrandingService
             return 'https:'.$href;
         }
 
+        $absolute = rtrim($base, '/').'/'.ltrim($href, '/');
         if (str_starts_with($href, '/')) {
             $parts = parse_url($base);
-
-            return ($parts['scheme'] ?? 'https').'://'.($parts['host'] ?? '').$href;
+            $absolute = ($parts['scheme'] ?? 'https').'://'.($parts['host'] ?? '').$href;
         }
 
-        return rtrim($base, '/').'/'.ltrim($href, '/');
+        return $absolute;
     }
 
     private function downloadAsset(?string $url, string $prefix): ?string
@@ -184,36 +184,31 @@ class BusinessBrandingService
             return null;
         }
 
+        $path = null;
         try {
             $response = Http::timeout(8)->withHeaders([
                 'User-Agent' => 'AACT-BrandFetcher/1.0',
                 'Accept' => 'image/*,*/*',
             ])->get($url);
 
-            if (! $response->successful()) {
-                return null;
-            }
-
             $mime = (string) ($response->header('Content-Type') ?? 'image/png');
-            if (! str_starts_with($mime, 'image/')) {
-                return null;
+            if ($response->successful() && str_starts_with($mime, 'image/')) {
+                $extension = match (true) {
+                    str_contains($mime, 'svg') => 'svg',
+                    str_contains($mime, 'jpeg'), str_contains($mime, 'jpg') => 'jpg',
+                    str_contains($mime, 'webp') => 'webp',
+                    str_contains($mime, 'gif') => 'gif',
+                    str_contains($mime, 'x-icon'), str_contains($mime, 'vnd.microsoft.icon') => 'ico',
+                    default => 'png',
+                };
+
+                $path = $prefix.'-'.Str::uuid().'.'.$extension;
+                Storage::disk('branding_assets')->put($path, $response->body());
             }
-
-            $extension = match (true) {
-                str_contains($mime, 'svg') => 'svg',
-                str_contains($mime, 'jpeg'), str_contains($mime, 'jpg') => 'jpg',
-                str_contains($mime, 'webp') => 'webp',
-                str_contains($mime, 'gif') => 'gif',
-                str_contains($mime, 'x-icon'), str_contains($mime, 'vnd.microsoft.icon') => 'ico',
-                default => 'png',
-            };
-
-            $path = $prefix.'-'.Str::uuid().'.'.$extension;
-            Storage::disk('branding_assets')->put($path, $response->body());
-
-            return $path;
         } catch (\Throwable) {
-            return null;
+            $path = null;
         }
+
+        return $path;
     }
 }

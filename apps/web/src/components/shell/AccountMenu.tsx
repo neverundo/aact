@@ -25,6 +25,12 @@ function initials(name: string): string {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
+function securityHrefFor(user: AuthUser | null, pathname: string): string {
+  if (user && !user.is_admin) return "/portal/security";
+  if (pathname.startsWith("/portal")) return "/portal/security";
+  return "/admin/security";
+}
+
 export function AccountMenu() {
   const router = useRouter();
   const pathname = usePathname();
@@ -36,12 +42,7 @@ export function AccountMenu() {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [savingLocale, setSavingLocale] = useState(false);
-  const securityHref =
-    user && !user.is_admin
-      ? "/portal/security"
-      : pathname.startsWith("/portal")
-        ? "/portal/security"
-        : "/admin/security";
+  const securityHref = securityHrefFor(user, pathname);
 
   useEffect(() => {
     fetchMe()

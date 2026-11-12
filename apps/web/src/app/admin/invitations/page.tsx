@@ -132,47 +132,78 @@ export default function AdminInvitationsPage() {
         </p>
       ) : null}
 
-      {loading ? (
-        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
-      ) : invitations.length === 0 && !error ? (
-        <EmptyState
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-          action={
-            <button
-              type="button"
-              className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
-              onClick={openCreateDrawer}
-            >
-              {t("create")}
-            </button>
-          }
-        />
-      ) : (
-        <ul className="divide-y divide-stone-200 border-y border-stone-200">
-          {invitations.map((invite) => {
-            const statusLabel = t(invitationStatusKey(invite));
-            return (
-              <li key={invite.uuid} className="space-y-1 py-3 text-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium text-stone-900">
-                    {invite.email} · {invite.business.name}
-                  </p>
-                  <StatusBadge tone={toneForStatus(statusLabel)}>
-                    {statusLabel}
-                  </StatusBadge>
-                </div>
-                <p className="text-stone-500">
-                  {tCommon("expiresAt", {
-                    date: formatDateTime(invite.expires_at, locale),
-                  })}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <InvitationsContent
+        loading={loading}
+        error={error}
+        invitations={invitations}
+        locale={locale}
+        onCreate={openCreateDrawer}
+      />
     </div>
+  );
+}
+
+function InvitationsContent({
+  loading,
+  error,
+  invitations,
+  locale,
+  onCreate,
+}: Readonly<{
+  loading: boolean;
+  error: string | null;
+  invitations: Invitation[];
+  locale: AppLocale;
+  onCreate: () => void;
+}>) {
+  const t = useTranslations("admin.invitations");
+  const tCommon = useTranslations("common");
+
+  if (loading) {
+    return <p className="text-sm text-stone-500">{tCommon("loading")}</p>;
+  }
+
+  if (invitations.length === 0 && !error) {
+    return (
+      <EmptyState
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+        action={
+          <button
+            type="button"
+            className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
+            onClick={onCreate}
+          >
+            {t("create")}
+          </button>
+        }
+      />
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-stone-200 border-y border-stone-200">
+      {invitations.map((invite) => {
+        const statusLabel = t(invitationStatusKey(invite));
+        return (
+          <li key={invite.uuid} className="space-y-1 py-3 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-medium text-stone-900">
+                {invite.email} · {invite.business.name}
+              </p>
+              <StatusBadge tone={toneForStatus(statusLabel)}>
+                {statusLabel}
+              </StatusBadge>
+            </div>
+            <p className="text-stone-500">
+              {tCommon("expiresAt", {
+                date: formatDateTime(invite.expires_at, locale),
+              })}
+            </p>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

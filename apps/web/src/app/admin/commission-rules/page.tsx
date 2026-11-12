@@ -44,7 +44,6 @@ function AdminCommissionRulesInner() {
   const { openDrawer, closeDrawer } = useShell();
   const t = useTranslations("admin.commissionRules");
   const tCommon = useTranslations("common");
-  const tEventType = useTranslations("enums.eventType");
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [websites, setWebsites] = useState<Website[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
@@ -153,77 +152,109 @@ function AdminCommissionRulesInner() {
       ) : null}
       {message ? <p className="text-sm text-emerald-800">{message}</p> : null}
 
-      {loading ? (
-        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
-      ) : rules.length === 0 && !error ? (
-        <EmptyState
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-          action={
-            <button
-              type="button"
-              className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
-              onClick={() => openCreateDrawer()}
-            >
-              {t("create")}
-            </button>
-          }
-        />
-      ) : (
-        <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
-          {rules.map((rule) => {
-            const scope = rule.website?.name
-              ? t("scopeWebsite", { name: rule.website.name })
-              : t("scopeBusiness");
-            const statusLabel = rule.is_active
-              ? t("statusActive")
-              : t("statusInactive");
-            return (
-              <li key={rule.id} className="space-y-2 py-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-stone-900">
-                        {rule.name} · v{rule.version}
-                      </p>
-                      <StatusBadge tone={rule.is_active ? "success" : "danger"}>
-                        {statusLabel}
-                      </StatusBadge>
-                    </div>
-                    <p className="text-stone-500">
-                      {rule.business?.name ??
-                        t("businessFallback", { id: rule.business_id })}{" "}
-                      · {scope}
-                    </p>
-                    <p className="text-stone-500">
-                      {t("details", {
-                        eventType: tEventType.has(rule.event_type)
-                          ? tEventType(rule.event_type)
-                          : rule.event_type,
-                        amount: rule.rate_bps,
-                        flat: rule.flat_minor
-                          ? t("flatSuffix", { amount: rule.flat_minor })
-                          : "",
-                        count: rule.priority,
-                      })}
-                    </p>
-                  </div>
-                  {rule.is_active ? (
-                    <button
-                      type="button"
-                      className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                      onClick={() => deactivate(rule.id)}
-                    >
-                      {t("deactivate")}
-                    </button>
-                  ) : null}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <CommissionRulesContent
+        loading={loading}
+        error={error}
+        rules={rules}
+        onCreate={() => openCreateDrawer()}
+        onDeactivate={deactivate}
+      />
     </div>
+  );
+}
+
+function CommissionRulesContent({
+  loading,
+  error,
+  rules,
+  onCreate,
+  onDeactivate,
+}: Readonly<{
+  loading: boolean;
+  error: string | null;
+  rules: Rule[];
+  onCreate: () => void;
+  onDeactivate: (id: number) => void;
+}>) {
+  const t = useTranslations("admin.commissionRules");
+  const tCommon = useTranslations("common");
+  const tEventType = useTranslations("enums.eventType");
+
+  if (loading) {
+    return <p className="text-sm text-stone-500">{tCommon("loading")}</p>;
+  }
+
+  if (rules.length === 0 && !error) {
+    return (
+      <EmptyState
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+        action={
+          <button
+            type="button"
+            className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
+            onClick={onCreate}
+          >
+            {t("create")}
+          </button>
+        }
+      />
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-stone-200 border-y border-stone-200 text-sm">
+      {rules.map((rule) => {
+        const scope = rule.website?.name
+          ? t("scopeWebsite", { name: rule.website.name })
+          : t("scopeBusiness");
+        const statusLabel = rule.is_active
+          ? t("statusActive")
+          : t("statusInactive");
+        return (
+          <li key={rule.id} className="space-y-2 py-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium text-stone-900">
+                    {rule.name} · v{rule.version}
+                  </p>
+                  <StatusBadge tone={rule.is_active ? "success" : "danger"}>
+                    {statusLabel}
+                  </StatusBadge>
+                </div>
+                <p className="text-stone-500">
+                  {rule.business?.name ??
+                    t("businessFallback", { id: rule.business_id })}{" "}
+                  · {scope}
+                </p>
+                <p className="text-stone-500">
+                  {t("details", {
+                    eventType: tEventType.has(rule.event_type)
+                      ? tEventType(rule.event_type)
+                      : rule.event_type,
+                    amount: rule.rate_bps,
+                    flat: rule.flat_minor
+                      ? t("flatSuffix", { amount: rule.flat_minor })
+                      : "",
+                    count: rule.priority,
+                  })}
+                </p>
+              </div>
+              {rule.is_active ? (
+                <button
+                  type="button"
+                  className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                  onClick={() => onDeactivate(rule.id)}
+                >
+                  {t("deactivate")}
+                </button>
+              ) : null}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

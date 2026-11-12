@@ -80,6 +80,24 @@ function invitationStatusKey(
   return "statusActive";
 }
 
+function membershipRoleLabel(
+  role: string,
+  tRole: { has: (key: string) => boolean; (key: string): string },
+): string {
+  return tRole.has(role) ? tRole(role) : role;
+}
+
+function membershipSecondaryLabel(
+  item: MembershipRow,
+  tRole: { has: (key: string) => boolean; (key: string): string },
+): string {
+  const roleLabel = membershipRoleLabel(item.role, tRole);
+  if (item.business?.name) {
+    return `${item.business.name} · ${roleLabel}`;
+  }
+  return roleLabel;
+}
+
 function totalFrom(response: Paginated<unknown>): number {
   return response.meta?.total ?? response.data.length;
 }
@@ -267,15 +285,7 @@ export default function AdminHomePage() {
               <AdminShortcutPreviewRow
                 key={item.id}
                 primary={item.user?.name ?? item.user?.email ?? tCommon("none")}
-                secondary={
-                  item.business?.name
-                    ? `${item.business.name} · ${
-                        tRole.has(item.role) ? tRole(item.role) : item.role
-                      }`
-                    : tRole.has(item.role)
-                      ? tRole(item.role)
-                      : item.role
-                }
+                secondary={membershipSecondaryLabel(item, tRole)}
                 badge={
                   <StatusBadge tone={toneForStatus(item.status)}>
                     {tMembershipStatus.has(item.status)

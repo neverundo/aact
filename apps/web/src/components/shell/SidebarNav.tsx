@@ -4,41 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import type { IconType } from "react-icons";
-import { LuBriefcaseBusiness, LuMailPlus } from "react-icons/lu";
-import { MdOutlineSpaceDashboard, MdSecurity } from "react-icons/md";
-import {
-  SlCreditCard,
-  SlDoc,
-  SlLink,
-  SlPeople,
-  SlPuzzle,
-  SlWallet,
-} from "react-icons/sl";
-import { TbContract, TbTimelineEventText } from "react-icons/tb";
-import { VscGitPullRequestComment } from "react-icons/vsc";
-import {
-  isNavItemActive,
-  type NavGroup,
-  type NavIconName,
-} from "@/lib/nav";
+import { isNavItemActive, type NavGroup } from "@/lib/nav";
+import { navIcons } from "@/lib/navIcons";
 import { useShell } from "./ShellProvider";
-
-const navIcons: Record<NavIconName, IconType> = {
-  home: MdOutlineSpaceDashboard,
-  building: LuBriefcaseBusiness,
-  calendar: TbTimelineEventText,
-  money: VscGitPullRequestComment,
-  envelope: LuMailPlus,
-  users: SlPeople,
-  creditCard: SlCreditCard,
-  plug: SlPuzzle,
-  percent: TbContract,
-  shield: MdSecurity,
-  file: SlDoc,
-  wallet: SlWallet,
-  link: SlLink,
-};
 
 export function SidebarNav({
   groups,
@@ -112,7 +80,7 @@ export function SidebarNav({
                     >
                       <Icon
                         aria-hidden="true"
-                        className="h-4 w-4 shrink-0"
+                        className="h-5 w-5 shrink-0"
                       />
                       {!collapsed ? <span>{label}</span> : (
                         <span className="sr-only">{label}</span>

@@ -210,7 +210,13 @@
       "shortcutInvitations": "Invitations",
       "shortcutMemberships": "Memberships",
       "shortcutEvents": "Events",
-      "shortcutPayouts": "Payouts"
+      "shortcutPayouts": "Payouts",
+      "subtitleTotal": "Total",
+      "subtitleLatestInvitations": "Latest invitation",
+      "subtitleLatestEvents": "Latest event",
+      "subtitlePendingPayouts": "Pending",
+      "previewEmpty": "No records",
+      "cardError": "Could not load."
     },
     "businesses": {
       "title": "Businesses",

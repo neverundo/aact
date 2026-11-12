@@ -1,7 +1,7 @@
 {
   "admin": {
     "businesses": {
-      "title": "Businesses",
+      "title": "Negócios",
       "summary": "Um business é o tenant comercial. Cada business tem websites, memberships, regras e credenciais de integração.",
       "actions": [
         "Criar business (nome, slug, moeda, limiar de payout).",

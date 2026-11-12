@@ -87,6 +87,71 @@ export default function AdminBusinessesPage() {
     });
   }
 
+  let businessesContent;
+  if (loading) {
+    businessesContent = (
+      <p className="text-sm text-stone-500">{tCommon("loading")}</p>
+    );
+  } else if (businesses.length === 0 && !error) {
+    businessesContent = (
+      <EmptyState
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+        action={
+          <button
+            type="button"
+            className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
+            onClick={openCreateDrawer}
+          >
+            {t("create")}
+          </button>
+        }
+      />
+    );
+  } else {
+    businessesContent = (
+      <ul className="divide-y divide-stone-200 border-y border-stone-200">
+        {businesses.map((business) => {
+          const activeLabel = business.is_active
+            ? tCommon("active")
+            : tCommon("inactive");
+          return (
+            <li
+              key={business.id}
+              className="flex items-center justify-between gap-4 py-3"
+            >
+              <div>
+                <Link
+                  href={`/admin/businesses/${business.id}`}
+                  className="font-medium text-stone-900 underline-offset-2 hover:underline"
+                >
+                  {business.name}
+                </Link>
+                <p className="text-sm text-stone-500">
+                  {business.slug} · {business.currency} ·{" "}
+                  {t("websiteCount", {
+                    count: business.websites?.length ?? 0,
+                  })}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <StatusBadge tone={toneForStatus(activeLabel)}>
+                  {activeLabel}
+                </StatusBadge>
+                <Link
+                  href={`/admin/businesses/${business.id}`}
+                  className="inline-flex min-h-11 items-center justify-center rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                >
+                  {t("manage")}
+                </Link>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -111,63 +176,7 @@ export default function AdminBusinessesPage() {
       ) : null}
       {message ? <p className="text-sm text-emerald-800">{message}</p> : null}
 
-      {loading ? (
-        <p className="text-sm text-stone-500">{tCommon("loading")}</p>
-      ) : businesses.length === 0 && !error ? (
-        <EmptyState
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-          action={
-            <button
-              type="button"
-              className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
-              onClick={openCreateDrawer}
-            >
-              {t("create")}
-            </button>
-          }
-        />
-      ) : (
-        <ul className="divide-y divide-stone-200 border-y border-stone-200">
-          {businesses.map((business) => {
-            const activeLabel = business.is_active
-              ? tCommon("active")
-              : tCommon("inactive");
-            return (
-              <li
-                key={business.id}
-                className="flex items-center justify-between gap-4 py-3"
-              >
-                <div>
-                  <Link
-                    href={`/admin/businesses/${business.id}`}
-                    className="font-medium text-stone-900 underline-offset-2 hover:underline"
-                  >
-                    {business.name}
-                  </Link>
-                  <p className="text-sm text-stone-500">
-                    {business.slug} · {business.currency} ·{" "}
-                    {t("websiteCount", {
-                      count: business.websites?.length ?? 0,
-                    })}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge tone={toneForStatus(activeLabel)}>
-                    {activeLabel}
-                  </StatusBadge>
-                  <Link
-                    href={`/admin/businesses/${business.id}`}
-                    className="min-h-11 rounded-md border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
-                  >
-                    {t("manage")}
-                  </Link>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {businessesContent}
     </div>
   );
 }

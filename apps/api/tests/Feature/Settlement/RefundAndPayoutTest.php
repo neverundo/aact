@@ -13,6 +13,7 @@ use App\Models\Business;
 use App\Models\BusinessMembership;
 use App\Models\Commission;
 use App\Models\IntegrationCredential;
+use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerLine;
 use App\Models\PaymentMethodVersion;
@@ -26,6 +27,8 @@ use App\Services\Integration\IntegrationCredentialService;
 use App\Support\AuthSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\Support\SignsIntegrationRequests;
 use Tests\TestCase;
 
@@ -323,16 +326,16 @@ class RefundAndPayoutTest extends TestCase
         ])->assertCreated()->json('data.id');
 
         // Simulate an out-of-band payable drain (reserved soft-lock cannot prevent raw ledger inserts).
-        $payableAccount = \App\Models\LedgerAccount::query()
+        $payableAccount = LedgerAccount::query()
             ->where('code', 'payable:membership:'.$membership->id)
             ->firstOrFail();
-        $expenseAccount = \App\Models\LedgerAccount::query()
+        $expenseAccount = LedgerAccount::query()
             ->where('business_id', $membership->business_id)
             ->where('code', 'commission_expense')
             ->firstOrFail();
 
-        $entryId = \Illuminate\Support\Facades\DB::table('ledger_entries')->insertGetId([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+        $entryId = DB::table('ledger_entries')->insertGetId([
+            'uuid' => (string) Str::uuid(),
             'business_id' => $membership->business_id,
             'commercial_event_id' => null,
             'commission_id' => null,
@@ -343,7 +346,7 @@ class RefundAndPayoutTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        \Illuminate\Support\Facades\DB::table('ledger_lines')->insert([
+        DB::table('ledger_lines')->insert([
             [
                 'ledger_entry_id' => $entryId,
                 'ledger_account_id' => $payableAccount->id,

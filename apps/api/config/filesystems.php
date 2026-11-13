@@ -70,7 +70,7 @@ return [
             }
 
             if ($driver !== 'local' && $driver !== '') {
-                throw new \InvalidArgumentException(
+                throw new InvalidArgumentException(
                     'PRIVATE_DOCUMENTS_DRIVER must be "local" or "s3", got: '.$driver
                 );
             }

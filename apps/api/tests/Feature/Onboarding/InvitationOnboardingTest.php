@@ -5,6 +5,7 @@ namespace Tests\Feature\Onboarding;
 use App\Enums\MembershipRole;
 use App\Enums\MembershipStatus;
 use App\Enums\PaymentMethodStatus;
+use App\Http\Middleware\SoftAuthenticateSession;
 use App\Models\Business;
 use App\Models\BusinessMembership;
 use App\Models\Invitation;
@@ -13,11 +14,11 @@ use App\Models\ReferralCode;
 use App\Models\User;
 use App\Models\Website;
 use App\Notifications\ReferrerInvitationNotification;
-use App\Http\Middleware\SoftAuthenticateSession;
 use App\Services\Documents\PrivateDocumentStorage;
 use App\Support\AuthSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
@@ -270,7 +271,7 @@ class InvitationOnboardingTest extends TestCase
             'is_active' => true,
         ]);
         $admin = User::factory()->create([
-            'password' => \Illuminate\Support\Facades\Hash::make('password-passphrase'),
+            'password' => Hash::make('password-passphrase'),
             'totp_secret' => 'JBSWY3DPEHPK3PXP',
             'totp_confirmed_at' => now(),
         ]);

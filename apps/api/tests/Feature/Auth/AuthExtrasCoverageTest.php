@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\EmailOtp;
 use App\Models\RecoveryCode;
 use App\Models\User;
 use App\Support\AuthSession;
@@ -40,7 +41,7 @@ class AuthExtrasCoverageTest extends TestCase
             ->assertJsonPath('status', 'email_otp_enabled');
 
         // Force past resend cooldown for the second issue call.
-        \App\Models\EmailOtp::query()->where('user_id', $user->id)->update([
+        EmailOtp::query()->where('user_id', $user->id)->update([
             'sent_at' => now()->subMinutes(10),
         ]);
 

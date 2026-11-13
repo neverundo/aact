@@ -6,6 +6,7 @@ use App\Enums\MembershipRole;
 use App\Enums\MembershipStatus;
 use App\Models\Business;
 use App\Models\BusinessMembership;
+use App\Models\Invitation;
 use App\Models\User;
 use App\Models\Website;
 use App\Support\AuthSession;
@@ -72,7 +73,7 @@ class WebsiteInvitationCoverageTest extends TestCase
             ->assertCreated()
             ->assertJsonStructure(['invitation', 'token']);
 
-        $invitation = \App\Models\Invitation::query()
+        $invitation = Invitation::query()
             ->where('email', 'coverage-invitee@example.test')
             ->firstOrFail();
         $invitation->forceFill(['last_sent_at' => now()->subMinutes(10)])->save();

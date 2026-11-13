@@ -19,7 +19,7 @@ Recorded at implementation time (2026-11-09).
 | MariaDB | 11.4.5 |
 | Redis | 7.4.2-alpine |
 | Nginx | 1.27.5-alpine |
-| localfakemail | [neverundo/localfakemail](https://github.com/neverundo/localfakemail) `main` (Compose git build; Postgres 16.8-alpine) |
+| localfakemail | [neverundo/localfakemail](https://github.com/neverundo/localfakemail) `a0c0d7d5d8294e4c896e56ce4ec40b299bac4360` (Compose git build pinned; Postgres 16.8-alpine) |
 | ClamAV | 1.4.2 |
 | SonarQube (Compose profile) | 25.5.0.107428-community |
 | SonarQube (local host :9000) | community (operator-managed; currently 26.x) |

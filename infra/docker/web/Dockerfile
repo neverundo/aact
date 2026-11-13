@@ -42,9 +42,13 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-COPY apps/web/package.json apps/web/package-lock.json ./
+RUN useradd --create-home --uid 1000 --shell /bin/bash nextjs \
+    && chown nextjs:nextjs /app
+
+COPY --chown=nextjs:nextjs apps/web/package.json apps/web/package-lock.json ./
+USER nextjs
 RUN npm ci
-COPY apps/web/ ./
+COPY --chown=nextjs:nextjs apps/web/ ./
 
 EXPOSE 3000
 CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]

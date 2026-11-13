@@ -27,7 +27,7 @@ Demonstra um modular monolith com invariantes financeiros reais: Sanctum MFA, is
 | Redis | 7.4.2 |
 | Nginx | 1.27.5 |
 | Node (contentores) | 22.16.0 |
-| localfakemail | [neverundo/localfakemail](https://github.com/neverundo/localfakemail) `main` (build git no Compose) |
+| localfakemail | [neverundo/localfakemail](https://github.com/neverundo/localfakemail) commit fixo em `compose.yaml` |
 | ClamAV (perfil opcional) | 1.4.2 |
 | SonarQube (perfil opcional) | 25.5.0 + PostgreSQL 16.8 |
 | Playwright (E2E) | 1.56 |

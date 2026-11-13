@@ -1,5 +1,6 @@
 name: aact
 
+# Secrets must be set in `.env` (see `.env.example`). No password defaults here.
 x-api-env: &api-env
   APP_NAME: AACT
   APP_ENV: local
@@ -12,10 +13,11 @@ x-api-env: &api-env
   DB_PORT: 3306
   DB_DATABASE: ${DB_DATABASE:-aact}
   DB_USERNAME: ${DB_USERNAME:-aact}
-  DB_PASSWORD: ${DB_PASSWORD:-aact_secret}
+  DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
   REDIS_CLIENT: phpredis
   REDIS_HOST: redis
   REDIS_PORT: 6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
   CACHE_STORE: redis
   QUEUE_CONNECTION: redis
   SESSION_DRIVER: redis
@@ -27,7 +29,7 @@ x-api-env: &api-env
   MAIL_HOST: localfakemail-smtp
   MAIL_PORT: 1025
   MAIL_USERNAME: ${MAIL_USERNAME:-lfm_aact_localdev}
-  MAIL_PASSWORD: ${MAIL_PASSWORD:-aact_dev_mail_secret}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:?set MAIL_PASSWORD in .env}
   MAIL_FROM_ADDRESS: noreply@aact.local
   MAIL_FROM_NAME: AACT
   FILESYSTEM_DISK: local
@@ -70,7 +72,14 @@ services:
     networks:
       - aact
     healthcheck:
-      test: ["CMD-SHELL", "php -r 'exit(0);'"]
+      # Avoid $ in the script — Compose treats $ as interpolation
+      test:
+        [
+          "CMD",
+          "php",
+          "-r",
+          "exit(@fsockopen('127.0.0.1',9000)?0:1);",
+        ]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -146,8 +155,8 @@ services:
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-aact}
       MYSQL_USER: ${DB_USERNAME:-aact}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-aact_secret}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env}
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:
@@ -161,7 +170,16 @@ services:
 
   redis:
     image: redis:7.4.2-alpine
-    command: ["redis-server", "--appendonly", "yes"]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}",
+      ]
     volumes:
       - redis_data:/data
     networks:
@@ -172,13 +190,13 @@ services:
       timeout: 3s
       retries: 10
 
-  # localfakemail — built from public main:
-  # https://github.com/neverundo/localfakemail
+  # localfakemail — pinned commit (update deliberately; do not float on main)
+  # https://github.com/neverundo/localfakemail/commit/a0c0d7d5d8294e4c896e56ce4ec40b299bac4360
   localfakemail-db:
     image: postgres:16.8-alpine
     environment:
       POSTGRES_USER: ${LOCALFAKEMAIL_DB_USER:-localfakemail}
-      POSTGRES_PASSWORD: ${LOCALFAKEMAIL_DB_PASSWORD:-localfakemail}
+      POSTGRES_PASSWORD: ${LOCALFAKEMAIL_DB_PASSWORD:?set LOCALFAKEMAIL_DB_PASSWORD in .env}
       POSTGRES_DB: ${LOCALFAKEMAIL_DB_NAME:-localfakemail}
     volumes:
       - localfakemail_pgdata:/var/lib/postgresql/data
@@ -196,12 +214,12 @@ services:
 
   localfakemail-smtp:
     build:
-      context: https://github.com/neverundo/localfakemail.git#main:apps/smtp
+      context: https://github.com/neverundo/localfakemail.git#a0c0d7d5d8294e4c896e56ce4ec40b299bac4360:apps/smtp
     depends_on:
       localfakemail-db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${LOCALFAKEMAIL_DB_USER:-localfakemail}:${LOCALFAKEMAIL_DB_PASSWORD:-localfakemail}@localfakemail-db:5432/${LOCALFAKEMAIL_DB_NAME:-localfakemail}
+      DATABASE_URL: postgresql://${LOCALFAKEMAIL_DB_USER:-localfakemail}:${LOCALFAKEMAIL_DB_PASSWORD:?set LOCALFAKEMAIL_DB_PASSWORD in .env}@localfakemail-db:5432/${LOCALFAKEMAIL_DB_NAME:-localfakemail}
       SMTP_PORT: 1025
       EMAIL_RETENTION_LIMIT: ${EMAIL_RETENTION_LIMIT:-500}
     networks:
@@ -221,12 +239,12 @@ services:
 
   localfakemail-web:
     build:
-      context: https://github.com/neverundo/localfakemail.git#main:apps/web
+      context: https://github.com/neverundo/localfakemail.git#a0c0d7d5d8294e4c896e56ce4ec40b299bac4360:apps/web
     depends_on:
       localfakemail-db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${LOCALFAKEMAIL_DB_USER:-localfakemail}:${LOCALFAKEMAIL_DB_PASSWORD:-localfakemail}@localfakemail-db:5432/${LOCALFAKEMAIL_DB_NAME:-localfakemail}
+      DATABASE_URL: postgresql://${LOCALFAKEMAIL_DB_USER:-localfakemail}:${LOCALFAKEMAIL_DB_PASSWORD:?set LOCALFAKEMAIL_DB_PASSWORD in .env}@localfakemail-db:5432/${LOCALFAKEMAIL_DB_NAME:-localfakemail}
       EMAIL_RETENTION_LIMIT: ${EMAIL_RETENTION_LIMIT:-500}
       SMTP_HOST: 127.0.0.1
       SMTP_PORT: 1025
@@ -257,7 +275,7 @@ services:
     environment:
       PGHOST: localfakemail-db
       PGUSER: ${LOCALFAKEMAIL_DB_USER:-localfakemail}
-      PGPASSWORD: ${LOCALFAKEMAIL_DB_PASSWORD:-localfakemail}
+      PGPASSWORD: ${LOCALFAKEMAIL_DB_PASSWORD:?set LOCALFAKEMAIL_DB_PASSWORD in .env}
       PGDATABASE: ${LOCALFAKEMAIL_DB_NAME:-localfakemail}
     volumes:
       - ./infra/localfakemail/seed-dev-credential.sql:/seed.sql:ro
@@ -288,7 +306,7 @@ services:
     environment:
       SONAR_JDBC_URL: jdbc:postgresql://sonar-db:5432/sonar
       SONAR_JDBC_USERNAME: sonar
-      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD:-sonar}
+      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD:?set SONAR_DB_PASSWORD in .env}
     volumes:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
@@ -303,7 +321,7 @@ services:
     image: postgres:16.8-alpine
     environment:
       POSTGRES_USER: sonar
-      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD:-sonar}
+      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD:?set SONAR_DB_PASSWORD in .env}
       POSTGRES_DB: sonar
     volumes:
       - sonar_db_data:/var/lib/postgresql/data

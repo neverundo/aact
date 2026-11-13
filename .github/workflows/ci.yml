@@ -153,5 +153,8 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+      - name: Prepare local env for Compose interpolation
+        run: cp .env.example .env
+
       - name: Validate Compose file
         run: docker compose -f compose.yaml config --quiet

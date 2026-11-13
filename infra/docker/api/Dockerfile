@@ -27,6 +27,9 @@ WORKDIR /var/www/html
 RUN useradd --create-home --uid 1000 --shell /bin/bash app \
     && chown -R app:app /var/www/html
 
+# Override pool user/group (see zz-app-user.conf). TCP :9000 needs no socket owner.
+COPY infra/docker/api/zz-app-user.conf /usr/local/etc/php-fpm.d/zz-app-user.conf
+
 FROM base AS vendor
 
 COPY --chown=app:app apps/api/composer.json apps/api/composer.lock ./
@@ -54,7 +57,7 @@ RUN php artisan package:discover --ansi \
     && php artisan view:cache
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD php -r 'exit(0);'
+    CMD php -r 'exit(@fsockopen("127.0.0.1",9000)?0:1);'
 
 CMD ["php-fpm", "-F"]
 

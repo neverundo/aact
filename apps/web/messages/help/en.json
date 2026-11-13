@@ -50,13 +50,15 @@
     },
     "payment-methods": {
       "title": "Payment methods",
-      "summary": "Versioned history (IBAN/MB Way). Approved, rejected, pending and superseded versions.",
+      "summary": "Versioned history (IBAN/MB Way) with bank proof validation (purpose bank_proof).",
       "actions": [
         "Filter by status.",
-        "Approve/reject pending ones.",
+        "Download clean bank proofs (opaque bytes, no preview).",
+        "Approve/reject pending ones with password + TOTP (reject requires a reason).",
         "Reveal payload with step-up (audited)."
       ],
       "pitfalls": [
+        "Approval requires a clean, readable bank_proof document on the membership.",
         "Reveal requires a recent password (step-up).",
         "Superseded versions are read-only history."
       ]

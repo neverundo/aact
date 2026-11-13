@@ -36,6 +36,8 @@
         <env name="NIGHTWATCH_ENABLED" value="false" force="true"/>
         <env name="AACT_ADMIN_TOTP_REQUIRED" value="false" force="true"/>
         <env name="AACT_FILE_SCANNER" value="fake" force="true"/>
+        <env name="PRIVATE_DOCUMENTS_DRIVER" value="local" force="true"/>
+        <env name="AACT_PRIVATE_DOCUMENT_ENCRYPTION_KEY" value="base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" force="true"/>
         <env name="APP_KEY" value="base64:2fl+KtvkdphvQyEfmEoeWWueItor1v4NmNh6n2R8MEA=" force="true"/>
     </php>
 </phpunit>

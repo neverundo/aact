@@ -75,4 +75,10 @@ class PrivateDocument extends Model
     {
         return $this->belongsTo(Business::class);
     }
+
+    /** @return BelongsTo<BusinessMembership, $this> */
+    public function membership(): BelongsTo
+    {
+        return $this->belongsTo(BusinessMembership::class, 'business_membership_id');
+    }
 }

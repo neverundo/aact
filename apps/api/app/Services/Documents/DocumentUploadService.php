@@ -10,11 +10,10 @@ use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use Symfony\Component\Mime\MimeTypes;
+use Throwable;
 
 class DocumentUploadService
 {
@@ -30,35 +29,70 @@ class DocumentUploadService
         string $purpose,
         ?Request $request = null,
     ): PrivateDocument {
-        $this->assertAllowed($file);
+        if (! $file->isValid()) {
+            throw ValidationException::withMessages([
+                'file' => ['The uploaded file is not valid.'],
+            ]);
+        }
 
-        $extension = strtolower($file->getClientOriginalExtension());
+        $max = (int) config('aact.documents.max_bytes');
+        if (($file->getSize() ?: 0) > $max) {
+            throw ValidationException::withMessages([
+                'file' => ['File exceeds the maximum allowed size.'],
+            ]);
+        }
+
+        $binary = $file->get();
+        if (! is_string($binary) || $binary === '') {
+            throw ValidationException::withMessages([
+                'file' => ['The uploaded file is empty or unreadable.'],
+            ]);
+        }
+
+        $mime = DocumentContentInspector::detectAllowedMime($binary);
+        if ($mime === null) {
+            throw ValidationException::withMessages([
+                'file' => ['Detected file content type is not allowed.'],
+            ]);
+        }
+
+        $extension = DocumentContentInspector::extensionForMime($mime);
+        $originalName = $this->sanitizeOriginalName((string) $file->getClientOriginalName(), $extension);
         $randomName = Str::uuid()->toString().'.'.$extension;
         $path = $membership->business_id.'/'.$user->id.'/'.$randomName;
 
-        Storage::disk('private_documents')->putFileAs(
-            dirname($path),
-            $file,
-            basename($path)
-        );
+        $scan = $this->scanPlaintext($binary);
 
-        $absolute = Storage::disk('private_documents')->path($path);
-        $scan = $this->scanner->scan($absolute);
+        try {
+            PrivateDocumentStorage::putEncrypted($path, $binary);
+        } catch (Throwable $e) {
+            report($e);
 
-        $document = PrivateDocument::query()->create([
-            'user_id' => $user->id,
-            'business_id' => $membership->business_id,
-            'business_membership_id' => $membership->id,
-            'purpose' => $purpose,
-            'disk' => 'private_documents',
-            'path' => $path,
-            'original_filename' => $file->getClientOriginalName(),
-            'mime' => $file->getMimeType() ?: 'application/octet-stream',
-            'size_bytes' => $file->getSize() ?: 0,
-            'scan_status' => $scan['status'],
-            'scanned_at' => now(),
-            'scan_engine' => $scan['engine'],
-        ]);
+            throw ValidationException::withMessages([
+                'file' => ['Failed to store the uploaded document.'],
+            ]);
+        }
+
+        try {
+            $document = PrivateDocument::query()->create([
+                'user_id' => $user->id,
+                'business_id' => $membership->business_id,
+                'business_membership_id' => $membership->id,
+                'purpose' => $purpose,
+                'disk' => PrivateDocumentStorage::DISK,
+                'path' => $path,
+                'original_filename' => $originalName,
+                'mime' => $mime,
+                'size_bytes' => strlen($binary),
+                'scan_status' => $scan['status'],
+                'scanned_at' => now(),
+                'scan_engine' => $scan['engine'],
+            ]);
+        } catch (Throwable $e) {
+            PrivateDocumentStorage::delete($path);
+
+            throw $e;
+        }
 
         $this->audit->log(
             action: 'document.uploaded',
@@ -85,6 +119,8 @@ class DocumentUploadService
             ]);
         }
 
+        $plain = PrivateDocumentStorage::getDecrypted($document->path);
+
         $this->audit->log(
             action: 'document.downloaded',
             actor: $actor,
@@ -93,48 +129,60 @@ class DocumentUploadService
             request: $request,
         );
 
-        return Storage::disk($document->disk)->download(
-            $document->path,
-            $document->original_filename,
+        $filename = $document->original_filename;
+
+        // Opaque attachment — never inline-preview untrusted uploads in the browser.
+        return response()->streamDownload(
+            function () use ($plain): void {
+                echo $plain;
+            },
+            $filename,
             [
-                'Content-Type' => $document->mime,
+                'Content-Type' => 'application/octet-stream',
                 'X-Content-Type-Options' => 'nosniff',
-                'Content-Disposition' => 'attachment; filename="'.$document->original_filename.'"',
+                'Content-Security-Policy' => "default-src 'none'; sandbox",
+                'X-Frame-Options' => 'DENY',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             ]
         );
     }
 
-    private function assertAllowed(UploadedFile $file): void
+    /**
+     * @return array{status: DocumentScanStatus, engine: string}
+     */
+    private function scanPlaintext(string $binary): array
     {
-        $max = (int) config('aact.documents.max_bytes');
-        if (($file->getSize() ?: 0) > $max) {
-            throw ValidationException::withMessages([
-                'file' => ['File exceeds the maximum allowed size.'],
-            ]);
+        $temp = tempnam(sys_get_temp_dir(), 'aactdoc_');
+        if ($temp === false) {
+            return [
+                'status' => DocumentScanStatus::Unavailable,
+                'engine' => 'unavailable',
+            ];
         }
 
-        $extension = strtolower($file->getClientOriginalExtension());
-        $allowedExtensions = config('aact.documents.allowed_extensions');
-        if (! in_array($extension, $allowedExtensions, true)) {
-            throw ValidationException::withMessages([
-                'file' => ['File extension is not allowed.'],
-            ]);
+        try {
+            if (file_put_contents($temp, $binary) === false) {
+                return [
+                    'status' => DocumentScanStatus::Unavailable,
+                    'engine' => 'unavailable',
+                ];
+            }
+
+            return $this->scanner->scan($temp);
+        } finally {
+            @unlink($temp);
+        }
+    }
+
+    private function sanitizeOriginalName(string $clientName, string $extension): string
+    {
+        $base = pathinfo($clientName, PATHINFO_FILENAME);
+        $base = preg_replace('/[^A-Za-z0-9._-]+/', '_', $base) ?? '';
+        $base = trim($base, '._-');
+        if ($base === '') {
+            $base = 'document';
         }
 
-        $detected = $file->getMimeType();
-        $allowedMimes = config('aact.documents.allowed_mimes');
-        if (! in_array($detected, $allowedMimes, true)) {
-            throw ValidationException::withMessages([
-                'file' => ['Detected file content type is not allowed.'],
-            ]);
-        }
-
-        // Reject ambiguous HTML/SVG even if extension was renamed.
-        $guessed = MimeTypes::getDefault()->guessMimeType($file->getRealPath() ?: '') ?? $detected;
-        if (in_array($guessed, ['image/svg+xml', 'text/html', 'application/xhtml+xml'], true)) {
-            throw ValidationException::withMessages([
-                'file' => ['File content type is not allowed.'],
-            ]);
-        }
+        return Str::limit($base, 180, '').'.'.$extension;
     }
 }

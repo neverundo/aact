@@ -36,6 +36,9 @@ x-api-env: &api-env
   HASH_DRIVER: argon2id
   AACT_ADMIN_TOTP_REQUIRED: ${AACT_ADMIN_TOTP_REQUIRED:-false}
   TRUSTED_PROXIES: ${TRUSTED_PROXIES:-*}
+  PRIVATE_DOCUMENTS_DRIVER: ${PRIVATE_DOCUMENTS_DRIVER:-local}
+  PRIVATE_DOCUMENTS_PREFIX: ${PRIVATE_DOCUMENTS_PREFIX:-referrers-docs}
+  AACT_PRIVATE_DOCUMENT_ENCRYPTION_KEY: ${AACT_PRIVATE_DOCUMENT_ENCRYPTION_KEY:?set AACT_PRIVATE_DOCUMENT_ENCRYPTION_KEY in .env}
 
 
 services:
@@ -285,7 +288,7 @@ services:
     restart: "no"
 
   clamav:
-    image: clamav/clamav:1.4.2
+    image: clamav/clamav:1.4.6
     volumes:
       - clamav_data:/var/lib/clamav
     networks:

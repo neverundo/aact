@@ -14,12 +14,14 @@ use App\Models\User;
 use App\Models\Website;
 use App\Notifications\ReferrerInvitationNotification;
 use App\Http\Middleware\SoftAuthenticateSession;
+use App\Services\Documents\PrivateDocumentStorage;
 use App\Support\AuthSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
+use PragmaRX\Google2FA\Google2FA;
 use Tests\TestCase;
 
 class InvitationOnboardingTest extends TestCase
@@ -126,11 +128,21 @@ class InvitationOnboardingTest extends TestCase
 
         $pending = PaymentMethodVersion::query()->where('version', 2)->firstOrFail();
 
+        Storage::fake(PrivateDocumentStorage::DISK);
+        $this->asSpa()->post('/api/v1/portal/memberships/'.$membershipId.'/documents', [
+            'purpose' => 'bank_proof',
+            'file' => UploadedFile::fake()->createWithContent('proof.pdf', '%PDF-1.4 bank proof'),
+        ], ['Accept' => 'application/json'])->assertCreated();
+
         $this->actingAs($admin);
         AuthSession::markFullyAuthenticated();
 
+        $totpCode = app(Google2FA::class)->getCurrentOtp('JBSWY3DPEHPK3PXP');
+
         $this->asSpa()->postJson('/api/v1/admin/payment-methods/'.$pending->id.'/review', [
             'status' => 'approved',
+            'password' => 'password-passphrase',
+            'code' => $totpCode,
         ])->assertOk()->assertJsonPath('data.status', 'approved');
 
         $this->asSpa()->postJson('/api/v1/admin/memberships/'.$membershipId.'/approve')
@@ -176,9 +188,11 @@ class InvitationOnboardingTest extends TestCase
             ->where('role', MembershipRole::Referrer)
             ->value('id');
 
+        $plain = '%PDF-1.4 onboarding identity document';
+
         $upload = $this->asSpa()->post('/api/v1/portal/memberships/'.$membershipId.'/documents', [
-            'purpose' => 'identity',
-            'file' => UploadedFile::fake()->create('id.pdf', 120, 'application/pdf'),
+            'purpose' => 'bank_proof',
+            'file' => UploadedFile::fake()->createWithContent('id.pdf', $plain),
         ], ['Accept' => 'application/json']);
 
         $upload->assertCreated()
@@ -198,7 +212,8 @@ class InvitationOnboardingTest extends TestCase
         AuthSession::markFullyAuthenticated();
 
         $this->asSpa()->get('/api/v1/portal/documents/'.$uuid.'/download')
-            ->assertOk();
+            ->assertOk()
+            ->assertStreamedContent($plain);
     }
 
     public function test_membership_show_idor_is_blocked(): void
@@ -255,6 +270,7 @@ class InvitationOnboardingTest extends TestCase
             'is_active' => true,
         ]);
         $admin = User::factory()->create([
+            'password' => \Illuminate\Support\Facades\Hash::make('password-passphrase'),
             'totp_secret' => 'JBSWY3DPEHPK3PXP',
             'totp_confirmed_at' => now(),
         ]);

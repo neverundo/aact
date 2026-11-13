@@ -50,13 +50,15 @@
     },
     "payment-methods": {
       "title": "Métodos de pagamento",
-      "summary": "Histórico versionado (IBAN/MB Way). Versões aprovadas, rejeitadas, pendentes e substituídas.",
+      "summary": "Histórico versionado (IBAN/MB Way) com validação de comprovativo bancário (purpose bank_proof).",
       "actions": [
         "Filtrar por estado.",
-        "Aprovar/rejeitar pendentes.",
+        "Descarregar comprovativos clean (bytes opacos, sem preview).",
+        "Aprovar/rejeitar pendentes com palavra-passe + TOTP (rejeição exige motivo).",
         "Reveal do payload com step-up (auditado)."
       ],
       "pitfalls": [
+        "Aprovação exige comprovativo bank_proof clean e legível na membership.",
         "Reveal exige palavra-passe recente (step-up).",
         "Versões superseded são histórico read-only."
       ]

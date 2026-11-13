@@ -84,6 +84,12 @@ class BusinessMembership extends Model
         return $this->hasMany(ReferralCode::class);
     }
 
+    /** @return HasMany<PrivateDocument, $this> */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(PrivateDocument::class);
+    }
+
     public function isApproved(): bool
     {
         return $this->status === MembershipStatus::Approved;

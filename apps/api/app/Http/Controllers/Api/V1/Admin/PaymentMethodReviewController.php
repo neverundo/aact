@@ -6,20 +6,33 @@ use App\Enums\PaymentMethodStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PaymentMethodVersionResource;
 use App\Models\PaymentMethodVersion;
+use App\Services\Auth\SensitiveActionVerifier;
 use App\Services\Onboarding\PaymentMethodService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 
 class PaymentMethodReviewController extends Controller
 {
-    public function __construct(private readonly PaymentMethodService $paymentMethods) {}
+    public function __construct(
+        private readonly PaymentMethodService $paymentMethods,
+        private readonly SensitiveActionVerifier $sensitiveActions,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
         $user = $request->user();
+        $proofPurpose = (string) config('aact.documents.payment_proof_purpose', 'bank_proof');
+
         $query = PaymentMethodVersion::query()
-            ->with(['user', 'business'])
+            ->with([
+                'user',
+                'business',
+                'membership.documents' => static function ($documents) use ($proofPurpose): void {
+                    $documents->where('purpose', $proofPurpose)->latest('id');
+                },
+            ])
             ->latest('id');
 
         if (! $user->isPlatformAdmin()) {
@@ -48,8 +61,21 @@ class PaymentMethodReviewController extends Controller
 
         $validated = $request->validate([
             'status' => ['required', 'in:approved,rejected'],
-            'notes' => ['nullable', 'string', 'max:1000'],
+            'password' => ['required', 'string'],
+            'code' => ['required', 'string', 'max:64'],
+            'notes' => [
+                Rule::requiredIf($request->input('status') === 'rejected'),
+                'nullable',
+                'string',
+                'max:1000',
+            ],
         ]);
+
+        $this->sensitiveActions->assertPasswordAndTotp(
+            $request->user(),
+            $validated['password'],
+            $validated['code'],
+        );
 
         $version = $this->paymentMethods->review(
             $request->user(),
@@ -58,6 +84,15 @@ class PaymentMethodReviewController extends Controller
             $validated['notes'] ?? null,
             $request,
         );
+
+        $version->load([
+            'user',
+            'business',
+            'membership.documents' => static function ($documents): void {
+                $documents->where('purpose', config('aact.documents.payment_proof_purpose', 'bank_proof'))
+                    ->latest('id');
+            },
+        ]);
 
         return new PaymentMethodVersionResource($version);
     }

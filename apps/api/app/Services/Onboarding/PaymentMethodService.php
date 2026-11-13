@@ -2,13 +2,16 @@
 
 namespace App\Services\Onboarding;
 
+use App\Enums\DocumentScanStatus;
 use App\Enums\PaymentMethodStatus;
 use App\Enums\PaymentMethodType;
 use App\Models\BusinessMembership;
 use App\Models\PaymentMethodVersion;
+use App\Models\PrivateDocument;
 use App\Models\User;
 use App\Services\Audit\AuditEntity;
 use App\Services\Audit\AuditLogger;
+use App\Services\Documents\PrivateDocumentStorage;
 use App\Support\AuthSession;
 use App\Support\Iban;
 use App\Support\PhoneNumber;
@@ -89,31 +92,80 @@ class PaymentMethodService
             ]);
         }
 
-        if ($version->status !== PaymentMethodStatus::PendingReview) {
+        if ($status === PaymentMethodStatus::Rejected && blank($notes)) {
             throw ValidationException::withMessages([
-                'status' => ['Only pending payment methods can be reviewed.'],
+                'notes' => ['A rejection reason is required.'],
             ]);
         }
 
-        $version->forceFill([
-            'status' => $status,
-            'reviewed_by_user_id' => $actor->id,
-            'reviewed_at' => now(),
-            'review_notes' => $notes,
-        ])->save();
+        $proofReady = false;
+
+        $reviewed = DB::transaction(function () use ($actor, $version, $status, $notes, &$proofReady) {
+            /** @var PaymentMethodVersion $locked */
+            $locked = PaymentMethodVersion::query()
+                ->whereKey($version->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->status !== PaymentMethodStatus::PendingReview) {
+                throw ValidationException::withMessages([
+                    'status' => ['Only pending payment methods can be reviewed.'],
+                ]);
+            }
+
+            if ($status === PaymentMethodStatus::Approved) {
+                $proofReady = $this->membershipHasReadableBankProof($locked->business_membership_id);
+                if (! $proofReady) {
+                    throw ValidationException::withMessages([
+                        'documents' => ['A clean, readable bank proof document is required before approval.'],
+                    ]);
+                }
+            } else {
+                $proofReady = $this->membershipHasReadableBankProof($locked->business_membership_id);
+            }
+
+            $locked->forceFill([
+                'status' => $status,
+                'reviewed_by_user_id' => $actor->id,
+                'reviewed_at' => now(),
+                'review_notes' => $notes,
+            ])->save();
+
+            return $locked->fresh();
+        });
 
         $this->audit->log(
             action: 'payment_method.reviewed',
             actor: $actor,
-            businessId: $version->business_id,
-            entity: new AuditEntity(PaymentMethodVersion::class, $version->id),
+            businessId: $reviewed->business_id,
+            entity: new AuditEntity(PaymentMethodVersion::class, $reviewed->id),
             context: [
                 'status' => $status->value,
+                'bank_proof_ready' => $proofReady,
             ],
             request: $request,
         );
 
-        return $version->fresh();
+        return $reviewed;
+    }
+
+    private function membershipHasReadableBankProof(int $membershipId): bool
+    {
+        $proofPurpose = (string) config('aact.documents.payment_proof_purpose', 'bank_proof');
+
+        $documents = PrivateDocument::query()
+            ->where('business_membership_id', $membershipId)
+            ->where('purpose', $proofPurpose)
+            ->where('scan_status', DocumentScanStatus::Clean)
+            ->get(['id', 'path']);
+
+        foreach ($documents as $document) {
+            if (PrivateDocumentStorage::isReadable($document->path)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

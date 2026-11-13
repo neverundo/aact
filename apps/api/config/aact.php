@@ -36,9 +36,16 @@ return [
         'max_bytes' => (int) env('AACT_DOCUMENT_MAX_BYTES', 5_242_880),
         'allowed_mimes' => ['application/pdf', 'image/jpeg', 'image/png'],
         'allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png'],
+        'purposes' => ['identity', 'bank_proof'],
+        'payment_proof_purpose' => 'bank_proof',
         'scanner' => env('AACT_FILE_SCANNER', 'auto'), // auto|clamav|unavailable|fake
         'clamav_host' => env('AACT_CLAMAV_HOST', 'clamav'),
         'clamav_port' => (int) env('AACT_CLAMAV_PORT', 3310),
+        // Dedicated key for application-encrypted document blobs (no APP_KEY write fallback).
+        // Format: base64:$(openssl rand -base64 32)
+        'encryption_key' => env('AACT_PRIVATE_DOCUMENT_ENCRYPTION_KEY'),
+        'driver' => env('PRIVATE_DOCUMENTS_DRIVER', 'local'),
+        'prefix' => env('PRIVATE_DOCUMENTS_PREFIX', 'referrers-docs'),
     ],
     'referral' => [
         'code_length' => 10,

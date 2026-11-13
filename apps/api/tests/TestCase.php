@@ -21,6 +21,8 @@ abstract class TestCase extends BaseTestCase
             'DB_DATABASE' => ':memory:',
             'AACT_FILE_SCANNER' => 'fake',
             'AACT_ADMIN_TOTP_REQUIRED' => 'false',
+            'PRIVATE_DOCUMENTS_DRIVER' => 'local',
+            'AACT_PRIVATE_DOCUMENT_ENCRYPTION_KEY' => 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
         ];
     }
 

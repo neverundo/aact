@@ -10,6 +10,7 @@ use App\Services\Documents\DocumentUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentController extends Controller
@@ -33,7 +34,7 @@ class DocumentController extends Controller
         $this->assertOwner($request, $membership);
 
         $validated = $request->validate([
-            'purpose' => ['required', 'string', 'max:64'],
+            'purpose' => ['required', 'string', 'max:64', Rule::in(config('aact.documents.purposes', []))],
             // 5 MiB — keep aligned with config('aact.documents.max_bytes') default.
             'file' => ['required', 'file', 'max:5120'],
         ]);

@@ -38,13 +38,51 @@ return [
             'report' => false,
         ],
 
-        'private_documents' => [
-            'driver' => 'local',
-            'root' => storage_path('app/private/documents'),
-            'visibility' => 'private',
-            'throw' => true,
-            'report' => false,
-        ],
+        /*
+        | Encrypted referrer documents (portal uploads).
+        | Staging/prod: PRIVATE_DOCUMENTS_DRIVER=s3 with AWS_* from deploy secrets
+        | / .env.staging and PRIVATE_DOCUMENTS_PREFIX (default referrers-docs/).
+        | Local/tests: private app storage. Objects are application-encrypted;
+        | downloads decrypt in the API.
+        */
+        'private_documents' => (static function (): array {
+            $driver = strtolower(trim((string) env('PRIVATE_DOCUMENTS_DRIVER', 'local')));
+            if ($driver === 's3') {
+                return [
+                    'driver' => 's3',
+                    'key' => env('AWS_ACCESS_KEY_ID'),
+                    'secret' => env('AWS_SECRET_ACCESS_KEY'),
+                    'region' => env('AWS_DEFAULT_REGION'),
+                    'bucket' => env('AWS_BUCKET'),
+                    'url' => env('AWS_URL'),
+                    'endpoint' => ($endpoint = env('AWS_ENDPOINT'))
+                        ? rtrim((string) $endpoint, '/')
+                        : null,
+                    'use_path_style_endpoint' => filter_var(
+                        env('AWS_USE_PATH_STYLE_ENDPOINT', 'false'),
+                        FILTER_VALIDATE_BOOLEAN
+                    ),
+                    'root' => trim((string) env('PRIVATE_DOCUMENTS_PREFIX', 'referrers-docs'), '/'),
+                    'visibility' => 'private',
+                    'throw' => true,
+                    'report' => true,
+                ];
+            }
+
+            if ($driver !== 'local' && $driver !== '') {
+                throw new \InvalidArgumentException(
+                    'PRIVATE_DOCUMENTS_DRIVER must be "local" or "s3", got: '.$driver
+                );
+            }
+
+            return [
+                'driver' => 'local',
+                'root' => storage_path('app/private/documents'),
+                'visibility' => 'private',
+                'throw' => true,
+                'report' => false,
+            ];
+        })(),
 
         'branding_assets' => [
             'driver' => 'local',

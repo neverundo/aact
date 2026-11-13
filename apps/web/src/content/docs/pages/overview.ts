@@ -124,7 +124,7 @@ const pages: Record<DocLocale, DocPage> = {
         blocks: [
           {
             type: "paragraph",
-            text: "A AACommissionTool (AACT) recebe eventos comerciais de sistemas externos, atribui vendas a referrers, aplica regras de comissão versionadas, mantém um ledger append-only em unidades menores e ajuda operadores a rever pedidos de payout. Os pagamentos são registados depois de executados fora da plataforma.",
+            text: "A AACommissionTool (AACT - Agnostically-Assigning-a-Comission Tool) recebe eventos comerciais de sistemas externos, atribui vendas a referrers, aplica regras de comissão versionadas, mantém um ledger append-only em unidades menores e ajuda operadores a rever pedidos de payout. Os pagamentos são registados depois de executados fora da plataforma.",
           },
           {
             type: "list",

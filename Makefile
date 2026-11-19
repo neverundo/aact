@@ -7,7 +7,8 @@ WEB_EXEC = $(COMPOSE) exec -T web
 setup:
 	@test -f .env || cp .env.example .env
 	@test -f apps/api/.env || cp apps/api/.env.example apps/api/.env
-	$(COMPOSE) build
+	# Limit parallel image builds — concurrent npm/composer layers spike Docker disk usage.
+	COMPOSE_PARALLEL_LIMIT=1 $(COMPOSE) build
 	$(COMPOSE) up -d mariadb redis localfakemail-db localfakemail-smtp localfakemail-web
 	@echo "Waiting for MariaDB..."
 	@sleep 8

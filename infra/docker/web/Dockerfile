@@ -43,14 +43,13 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-# Install as root (same as deps stage). Running `npm ci` as non-root on BuildKit/overlay
-# has failed with ENOENT on node_modules/.bin after interrupted/ENOSPC builds.
+# Do not bake node_modules into the image: exporting that layer peaks disk hard
+# (ENOSPC during "exporting to image") when Compose builds web + localfakemail in
+# parallel. `make setup` runs `npm ci` into the named `web_node_modules` volume.
 # Image user `node` is uid 1000 — matches typical host bind-mount ownership.
-COPY apps/web/package.json apps/web/package-lock.json ./
-RUN npm ci \
-    && chown -R node:node /app
-
+RUN chown node:node /app
 USER node
+COPY --chown=node:node apps/web/package.json apps/web/package-lock.json ./
 COPY --chown=node:node apps/web/ ./
 
 EXPOSE 3000

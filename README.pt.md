@@ -48,6 +48,8 @@ compose.yaml      Stack local
 
 ## Início rápido
 
+**Disco:** reserva **~20 GB livres** (melhor **30–40 GB**) no filesystem dos dados Docker para um `make setup` limpo — o pico vem de construir imagens AACT + localfakemail, pulls de bases e cache BuildKit/`npm`, não só da app em execução. Detalhes: [`docs/local-development.md`](docs/local-development.md).
+
 ```bash
 cp .env.example .env
 make setup

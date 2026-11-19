@@ -43,12 +43,14 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-# Reuse image user `node` (uid 1000) — avoids "UID 1000 is not unique" from useradd.
-RUN chown node:node /app
+# Install as root (same as deps stage). Running `npm ci` as non-root on BuildKit/overlay
+# has failed with ENOENT on node_modules/.bin after interrupted/ENOSPC builds.
+# Image user `node` is uid 1000 — matches typical host bind-mount ownership.
+COPY apps/web/package.json apps/web/package-lock.json ./
+RUN npm ci \
+    && chown -R node:node /app
 
-COPY --chown=node:node apps/web/package.json apps/web/package-lock.json ./
 USER node
-RUN npm ci
 COPY --chown=node:node apps/web/ ./
 
 EXPOSE 3000

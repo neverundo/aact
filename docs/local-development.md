@@ -77,6 +77,14 @@ If `8080`/`8025` are already bound on the host, keep the `18080`/`18025` default
 
 Demo seed + walkthrough: `make seed-demo` then [`docs/demo-walkthrough.md`](demo-walkthrough.md).
 
+If `npm ci` fails with `EACCES` on `/app/node_modules`, remove the stale volume and re-run setup:
+
+```bash
+docker compose down
+docker volume rm aact_web_node_modules
+make setup
+```
+
 ## Host-side checks (without Compose)
 
 Useful while iterating on a single app:

@@ -13,7 +13,9 @@ setup:
 	@echo "Waiting for MariaDB..."
 	@sleep 8
 	$(COMPOSE) run --rm --no-deps api composer install --no-interaction
-	$(COMPOSE) run --rm --no-deps web npm ci
+	# Named volume may already exist as root from a prior failed run — install as root then chown.
+	$(COMPOSE) run --rm --no-deps --user root web \
+		sh -c "npm ci && chown -R node:node /app/node_modules"
 	@if ! grep -q '^APP_KEY=base64:' apps/api/.env; then \
 		KEY=$$($(COMPOSE) run --rm --no-deps api php artisan key:generate --show); \
 		sed -i "s|^APP_KEY=.*|APP_KEY=$$KEY|" .env apps/api/.env; \

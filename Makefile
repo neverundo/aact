@@ -7,9 +7,9 @@ WEB_EXEC = $(COMPOSE) exec -T web
 setup:
 	@test -f .env || cp .env.example .env
 	@test -f apps/api/.env || cp apps/api/.env.example apps/api/.env
-	# Limit parallel image builds — concurrent npm/composer layers spike Docker disk usage.
-	COMPOSE_PARALLEL_LIMIT=1 $(COMPOSE) build
-	$(COMPOSE) up -d mariadb redis localfakemail-db localfakemail-smtp localfakemail-web
+	@echo "Building core images (api/web/nginx). localfakemail only if COMPOSE_PROFILES includes mail."
+	$(COMPOSE) build api web nginx
+	$(COMPOSE) up -d mariadb redis
 	@echo "Waiting for MariaDB..."
 	@sleep 8
 	$(COMPOSE) run --rm --no-deps api composer install --no-interaction
@@ -21,6 +21,7 @@ setup:
 	$(COMPOSE) up -d
 	$(MAKE) migrate
 	@echo "AACT is up at http://localhost:$${HTTP_PORT:-18080}"
+	@echo "Mail: MAIL_MAILER=$${MAIL_MAILER:-log} (inbox UI: COMPOSE_PROFILES=mail + MAIL_MAILER=smtp, then make setup / compose up)"
 
 up:
 	$(COMPOSE) up -d

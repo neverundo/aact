@@ -25,11 +25,12 @@ x-api-env: &api-env
   SESSION_DOMAIN: ""
   SESSION_SECURE_COOKIE: "false"
   SANCTUM_STATEFUL_DOMAINS: localhost,localhost:${HTTP_PORT:-18080},127.0.0.1,127.0.0.1:${HTTP_PORT:-18080}
-  MAIL_MAILER: smtp
-  MAIL_HOST: localfakemail-smtp
-  MAIL_PORT: 1025
+  # Default: log (no localfakemail). For inbox UI set COMPOSE_PROFILES=mail and MAIL_MAILER=smtp.
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  MAIL_HOST: ${MAIL_HOST:-localfakemail-smtp}
+  MAIL_PORT: ${MAIL_PORT:-1025}
   MAIL_USERNAME: ${MAIL_USERNAME:-lfm_aact_localdev}
-  MAIL_PASSWORD: ${MAIL_PASSWORD:?set MAIL_PASSWORD in .env}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-}
   MAIL_FROM_ADDRESS: noreply@aact.local
   MAIL_FROM_NAME: AACT
   FILESYSTEM_DISK: local
@@ -61,6 +62,7 @@ services:
       context: .
       dockerfile: infra/docker/api/Dockerfile
       target: app-dev
+    image: aact-api:local
     environment:
       <<: *api-env
     volumes:
@@ -70,8 +72,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      localfakemail-smtp:
-        condition: service_started
     networks:
       - aact
     healthcheck:
@@ -88,11 +88,9 @@ services:
       retries: 5
       start_period: 20s
 
+  # Reuse the api image — do not rebuild the same Dockerfile three times.
   queue:
-    build:
-      context: .
-      dockerfile: infra/docker/api/Dockerfile
-      target: app-dev
+    image: aact-api:local
     command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--max-time=3600"]
     environment:
       <<: *api-env
@@ -109,10 +107,7 @@ services:
     restart: unless-stopped
 
   scheduler:
-    build:
-      context: .
-      dockerfile: infra/docker/api/Dockerfile
-      target: app-dev
+    image: aact-api:local
     command: ["sh", "-c", "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"]
     environment:
       <<: *api-env
@@ -193,9 +188,11 @@ services:
       timeout: 3s
       retries: 10
 
-  # localfakemail — pinned commit (update deliberately; do not float on main)
+  # localfakemail — profile `mail` (optional). Pinned commit; do not float on main.
   # https://github.com/neverundo/localfakemail/commit/a0c0d7d5d8294e4c896e56ce4ec40b299bac4360
+  # Enable: COMPOSE_PROFILES=mail and MAIL_MAILER=smtp in .env
   localfakemail-db:
+    profiles: ["mail"]
     image: postgres:16.8-alpine
     environment:
       POSTGRES_USER: ${LOCALFAKEMAIL_DB_USER:-localfakemail}
@@ -216,6 +213,7 @@ services:
       retries: 10
 
   localfakemail-smtp:
+    profiles: ["mail"]
     build:
       context: https://github.com/neverundo/localfakemail.git#a0c0d7d5d8294e4c896e56ce4ec40b299bac4360:apps/smtp
     depends_on:
@@ -241,6 +239,7 @@ services:
       start_period: 10s
 
   localfakemail-web:
+    profiles: ["mail"]
     build:
       context: https://github.com/neverundo/localfakemail.git#a0c0d7d5d8294e4c896e56ce4ec40b299bac4360:apps/web
     depends_on:
@@ -271,6 +270,7 @@ services:
       start_period: 40s
 
   localfakemail-seed:
+    profiles: ["mail"]
     image: postgres:16.8-alpine
     depends_on:
       localfakemail-web:

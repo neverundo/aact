@@ -2,7 +2,13 @@
 
 FROM php:8.4.27-fpm-bookworm AS base
 
-RUN apt-get update \
+# Keep apt lists/packages for BuildKit cache mounts across rebuilds.
+RUN rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
         git \
@@ -17,8 +23,7 @@ RUN apt-get update \
         pdo_mysql \
         zip \
     && pecl install redis-6.1.0 \
-    && docker-php-ext-enable redis \
-    && rm -rf /var/lib/apt/lists/*
+    && docker-php-ext-enable redis
 
 COPY --from=composer:2.8.8 /usr/bin/composer /usr/bin/composer
 
@@ -66,17 +71,13 @@ FROM base AS app-dev
 ENV APP_ENV=local \
     APP_DEBUG=true
 
+# Local Compose bind-mounts ./apps/api and runs `composer install` in make setup.
+# Do not bake vendor/app into this image — it only wastes build time and disk.
 USER root
-RUN pecl install xdebug-3.4.2 \
+RUN --mount=type=cache,target=/tmp/pear \
+    pecl install xdebug-3.4.2 \
     && docker-php-ext-enable xdebug \
     || true
 
-COPY --chown=app:app apps/api/composer.json apps/api/composer.lock ./
 USER app
-RUN composer install --no-interaction --no-progress --prefer-dist --no-scripts
-
-USER root
-COPY --chown=app:app apps/api/ ./
-USER app
-
 CMD ["php-fpm", "-F"]

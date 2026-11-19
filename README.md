@@ -48,7 +48,7 @@ compose.yaml      Local stack
 
 ## Quick start
 
-**Disk:** plan for **~20 GB free** (better **30–40 GB**) on the Docker data filesystem for a clean `make setup` — the peak comes from building AACT + localfakemail images, base pulls, and BuildKit/npm extract cache, not from the running app alone. Details: [`docs/local-development.md`](docs/local-development.md).
+**Disk / time:** default `make setup` builds api + web + nginx only (**~15 GB** free is a sensible minimum). Optional mail inbox (`COMPOSE_PROFILES=mail`) adds localfakemail builds and needs more disk/time. Details: [`docs/local-development.md`](docs/local-development.md).
 
 ```bash
 cp .env.example .env
@@ -57,7 +57,7 @@ make seed-demo
 ```
 
 - App: [http://localhost:18080](http://localhost:18080)
-- localfakemail: [http://localhost:18025](http://localhost:18025)
+- Mail inbox (optional profile `mail`): [http://localhost:18025](http://localhost:18025)
 
 Health: `GET /api/v1/health` · `GET /up` · `GET /healthz`
 

@@ -22,12 +22,13 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-RUN useradd --create-home --uid 1000 --shell /bin/bash nextjs
-COPY --from=build --chown=nextjs:nextjs /app/.next/standalone ./
-COPY --from=build --chown=nextjs:nextjs /app/.next/static ./.next/static
-COPY --from=build --chown=nextjs:nextjs /app/public ./public
+# Official node images already ship user `node` (uid/gid 1000).
+RUN chown node:node /app
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
 
-USER nextjs
+USER node
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
@@ -42,13 +43,13 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-RUN useradd --create-home --uid 1000 --shell /bin/bash nextjs \
-    && chown nextjs:nextjs /app
+# Reuse image user `node` (uid 1000) — avoids "UID 1000 is not unique" from useradd.
+RUN chown node:node /app
 
-COPY --chown=nextjs:nextjs apps/web/package.json apps/web/package-lock.json ./
-USER nextjs
+COPY --chown=node:node apps/web/package.json apps/web/package-lock.json ./
+USER node
 RUN npm ci
-COPY --chown=nextjs:nextjs apps/web/ ./
+COPY --chown=node:node apps/web/ ./
 
 EXPOSE 3000
 CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]

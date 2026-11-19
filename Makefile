@@ -7,15 +7,24 @@ WEB_EXEC = $(COMPOSE) exec -T web
 setup:
 	@test -f .env || cp .env.example .env
 	@test -f apps/api/.env || cp apps/api/.env.example apps/api/.env
+	@docker_root=$$(docker info -f '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker); \
+		echo "Docker Root Dir: $$docker_root"; \
+		df -h "$$docker_root" . 2>/dev/null || df -h; \
+		avail_k=$$(df -Pk "$$docker_root" 2>/dev/null | awk 'NR==2{print $$4}'); \
+		if [ -n "$$avail_k" ] && [ "$$avail_k" -lt 4000000 ]; then \
+			echo "ERROR: need ~4GiB free on $$docker_root (have $$((avail_k/1024))MiB)."; \
+			echo "Free space: docker builder prune -af && docker system prune -af"; \
+			exit 1; \
+		fi
 	@echo "Building core images (api/web/nginx). localfakemail only if COMPOSE_PROFILES includes mail."
 	$(COMPOSE) build api web nginx
 	$(COMPOSE) up -d mariadb redis
 	@echo "Waiting for MariaDB..."
 	@sleep 8
 	$(COMPOSE) run --rm --no-deps api composer install --no-interaction
-	# Named volume may already exist as root from a prior failed run — install as root then chown.
+	# Install into bind-mounted ./apps/web (host disk). Cache on /app too; chown for USER node.
 	$(COMPOSE) run --rm --no-deps --user root web \
-		sh -c "npm ci && chown -R node:node /app/node_modules"
+		sh -c "npm ci --cache /app/.npm-cache && rm -rf /app/.npm-cache && chown -R node:node /app/node_modules"
 	@if ! grep -q '^APP_KEY=base64:' apps/api/.env; then \
 		KEY=$$($(COMPOSE) run --rm --no-deps api php artisan key:generate --show); \
 		sed -i "s|^APP_KEY=.*|APP_KEY=$$KEY|" .env apps/api/.env; \

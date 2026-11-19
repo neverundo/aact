@@ -131,8 +131,10 @@ services:
       PORT: "3000"
       HOSTNAME: 0.0.0.0
     volumes:
+      # Bind-mount only: node_modules lives on the host project disk (not a Docker
+      # volume under /var/lib/docker), which avoids ENOSPC when the clone is on a
+      # larger filesystem than Docker's data root.
       - ./apps/web:/app
-      - web_node_modules:/app/node_modules
     networks:
       - aact
     healthcheck:
@@ -350,4 +352,3 @@ volumes:
   sonarqube_logs:
   sonar_db_data:
   localfakemail_pgdata:
-  web_node_modules:

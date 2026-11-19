@@ -20,11 +20,11 @@ That keeps first boot closer to “clone and run” instead of compiling two ext
 Even the lean path pulls and compiles:
 
 1. **API image** — `php:8.4-fpm-bookworm` + apt packages + PHP extensions + Redis pecl + Xdebug (queue/scheduler **reuse** `aact-api:local`; they do not rebuild).
-2. **Web image** — thin Node base (no baked `node_modules`; `npm ci` fills `web_node_modules` during setup).
-3. **Pulled services** — MariaDB, Redis.
-4. **Optional `mail` profile** — Postgres + localfakemail SMTP/web (remote Git context + `npm install` inside those Dockerfiles) — the main historical source of 20–40+ minute / ENOSPC setups.
+2. **Web image** — thin Node base; `npm ci` writes `apps/web/node_modules` on the **host project disk** (bind mount), not a Docker named volume.
+3. **Pulled services** — MariaDB, Redis (these still live under Docker’s data root).
+4. **Optional `mail` profile** — Postgres + localfakemail SMTP/web — the main historical source of 20–40+ minute / ENOSPC setups.
 
-Confirm the resized disk is where Docker writes (`docker info | grep -i 'Docker Root Dir'`, then `df -h` / `df -i` on that path).
+`make setup` prints `df` for the Docker root and the project directory and aborts if Docker has under ~4 GiB free. Resizing the VM does nothing if Docker still sits on a full partition — check both paths.
 
 ### Hung or crawling image pulls
 
@@ -77,11 +77,14 @@ If `8080`/`8025` are already bound on the host, keep the `18080`/`18025` default
 
 Demo seed + walkthrough: `make seed-demo` then [`docs/demo-walkthrough.md`](demo-walkthrough.md).
 
-If `npm ci` fails with `EACCES` on `/app/node_modules`, remove the stale volume and re-run setup:
+If `npm ci` fails with `ENOSPC`, free Docker leftovers (images still need room for layers) and clear a partial install:
 
 ```bash
-docker compose down
-docker volume rm aact_web_node_modules
+docker builder prune -af
+docker system prune -af
+rm -rf apps/web/node_modules apps/web/.npm-cache
+docker volume rm aact_web_node_modules 2>/dev/null || true
+df -h "$(docker info -f '{{.DockerRootDir}}')" .
 make setup
 ```
 

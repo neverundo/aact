@@ -43,11 +43,9 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-# Do not bake packages into the image (disk peak on export). `make setup` runs
-# `npm ci` into the named `web_node_modules` volume. Seed an empty node_modules
-# owned by `node` (uid 1000) so the first volume populate is writable by USER node.
-RUN mkdir -p /app/node_modules \
-    && chown -R node:node /app
+# Do not bake packages into the image (disk peak on export). Local Compose
+# bind-mounts ./apps/web and `make setup` runs npm ci on the host project disk.
+RUN chown node:node /app
 USER node
 COPY --chown=node:node apps/web/package.json apps/web/package-lock.json ./
 COPY --chown=node:node apps/web/ ./

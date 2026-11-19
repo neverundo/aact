@@ -3,11 +3,40 @@
 ## Prerequisites
 
 - Docker Engine + Compose v2
-- **Free disk:** at least **~15 GB** available on the Docker data filesystem for a default `make setup` (no `mail` profile); **~30–40 GB** if you also enable localfakemail (`COMPOSE_PROFILES=mail`)
-- Network access to Docker Hub (and to GitHub if building the `mail` profile)
+- **Free disk on Docker’s data filesystem** (often `/var/lib/docker` on `/`): plan for **~8–15 GB free** for a default `make setup`; more if you enable `COMPOSE_PROFILES=mail`
+- Network access to Docker Hub (HTTPS to `registry-1.docker.io` / CloudFront) — and to GitHub if using the `mail` profile
 - Optional: GNU Make, PHP 8.4+/8.5, Composer 2, Node 22 (for host-side tooling)
 
 This host currently has PHP 8.5 and Node 22 available. Containers pin PHP 8.4 and Node 22.16.
+
+### Split disks (common cloud VM trap)
+
+Many VMs put a small root (`/`, ~8–10 GB) and a large `/home`. Expanding the VM disk into `/home` does **not** help Docker if `Docker Root Dir` is still under `/`:
+
+```text
+/dev/vda1   9.1G   …  2.6G free   /          ← Docker images/layers live here
+/dev/vda6    42G   …   39G free   /home      ← git clone is here; npm/composer bind-mounts help, pulls do not
+```
+
+Check:
+
+```bash
+docker info -f '{{.DockerRootDir}}'
+df -h "$(docker info -f '{{.DockerRootDir}}')" .
+```
+
+**Fix (recommended):** move Docker’s data root onto the large disk (Debian/Ubuntu outline):
+
+```bash
+sudo systemctl stop docker
+sudo mkdir -p /home/docker-data
+# optional: rsync -aP /var/lib/docker/ /home/docker-data/
+# Then set data-root in /etc/docker/daemon.json, e.g. { "data-root": "/home/docker-data" }
+sudo systemctl start docker
+docker info -f '{{.DockerRootDir}}'   # must show /home/docker-data
+```
+
+Alternatively grow/repartition `/` so the Docker filesystem itself has tens of GB free.
 
 ### What `make setup` builds (default)
 
@@ -24,25 +53,28 @@ Even the lean path pulls and compiles:
 3. **Pulled services** — MariaDB, Redis (these still live under Docker’s data root).
 4. **Optional `mail` profile** — Postgres + localfakemail SMTP/web — the main historical source of 20–40+ minute / ENOSPC setups.
 
-`make setup` prints `df` for the Docker root and the project directory and aborts if Docker has under ~4 GiB free. Resizing the VM does nothing if Docker still sits on a full partition — check both paths.
+`make setup` prints `df` for the Docker root and the project directory and aborts if Docker has under ~8 GiB free.
 
-### Hung or crawling image pulls
+### Hung pulls / `DeadlineExceeded` / `i/o timeout`
 
-If BuildKit sits for tens of minutes on lines like `php:8.4.27-fpm-bookworm` with progress stuck at a few MB (e.g. `4MB / 104MB`), that is almost always **Docker Hub / VM network / disk write**, not application code. It is not an acceptable “compile” cost — cancel and diagnose:
+Failures like `failed to resolve source metadata for docker.io/library/nginx:…` or `dial tcp …:443: i/o timeout` / `DeadlineExceeded` mean the VM **cannot reliably reach Docker Hub’s CDN**. That is infrastructure (egress firewall, slow/blocked 443, flaky DNS), not an AACT bug.
 
 ```bash
-# Is the pull itself slow?
+# Reproduce outside Compose:
+docker pull nginx:1.27.5-alpine
 docker pull php:8.4.27-fpm-bookworm
 
-df -h "$(docker info -f '{{.DockerRootDir}}')"
-df -i "$(docker info -f '{{.DockerRootDir}}')"
+curl -I --max-time 20 https://registry-1.docker.io/v2/
+```
+
+If pulls hang or time out, fix network/DNS/proxy or configure a registry mirror; retrying `make setup` alone will keep failing. Slow links plus a tiny Docker disk also produce multi‑tens‑of‑minutes “stuck” layer downloads.
+
+If a previous run hit `ENOSPC`, prune before retrying — corrupted BuildKit/containerd state often looks like endless partial pulls:
+
+```bash
 docker builder prune -af
 docker system prune -af
 ```
-
-Retry after a healthy `docker pull`. On restricted networks, configure a registry mirror for Docker Hub.
-
-If a previous run hit `ENOSPC`, prune before retrying — corrupted BuildKit/containerd state often looks like endless partial pulls.
 
 ## First boot
 

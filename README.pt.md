@@ -48,7 +48,7 @@ compose.yaml      Stack local
 
 ## Início rápido
 
-**Disco / tempo:** o `make setup` por omissão constrói só api + web + nginx (**~15 GB** livres é um mínimo razoável). A inbox de mail (`COMPOSE_PROFILES=mail`) acrescenta builds do localfakemail e precisa de mais disco/tempo. Detalhes: [`docs/local-development.md`](docs/local-development.md).
+**Disco / tempo:** o `make setup` por omissão constrói api + web + nginx. O espaço livre tem de estar no **filesystem de dados do Docker** (muitas vezes `/var/lib/docker` em `/`), não só em `/home` onde fizeste o clone — ver [`docs/local-development.md`](docs/local-development.md). Mail opcional: `COMPOSE_PROFILES=mail`.
 
 ```bash
 cp .env.example .env

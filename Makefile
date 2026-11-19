@@ -10,11 +10,18 @@ setup:
 	@docker_root=$$(docker info -f '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker); \
 		echo "Docker Root Dir: $$docker_root"; \
 		df -h "$$docker_root" . 2>/dev/null || df -h; \
-		avail_k=$$(df -Pk "$$docker_root" 2>/dev/null | awk 'NR==2{print $$4}'); \
-		if [ -n "$$avail_k" ] && [ "$$avail_k" -lt 4000000 ]; then \
-			echo "ERROR: need ~4GiB free on $$docker_root (have $$((avail_k/1024))MiB)."; \
-			echo "Free space: docker builder prune -af && docker system prune -af"; \
+		avail_k=$$(df -Pk "$$docker_root" 2>/dev/null | tail -1 | awk '{print $$4}'); \
+		proj_k=$$(df -Pk . 2>/dev/null | tail -1 | awk '{print $$4}'); \
+		if [ -n "$$avail_k" ] && [ "$$avail_k" -lt 8000000 ]; then \
+			echo "ERROR: need ~8GiB free on Docker data filesystem $$docker_root (have $$((avail_k/1024))MiB)."; \
+			echo "Images/layers land here — NOT necessarily where you git-cloned the repo."; \
+			echo "If /home (or another disk) has space but $$docker_root does not, move Docker's data-root"; \
+			echo "onto that disk (see docs/local-development.md) or grow the Docker partition."; \
+			echo "Short-term: docker builder prune -af && docker system prune -af"; \
 			exit 1; \
+		fi; \
+		if [ -n "$$avail_k" ] && [ -n "$$proj_k" ] && [ "$$proj_k" -gt $$((avail_k * 3)) ]; then \
+			echo "WARNING: project disk has much more free space than Docker root — ENOSPC/timeouts are likely until data-root is moved."; \
 		fi
 	@echo "Building core images (api/web/nginx). localfakemail only if COMPOSE_PROFILES includes mail."
 	$(COMPOSE) build api web nginx

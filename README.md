@@ -48,7 +48,7 @@ compose.yaml      Local stack
 
 ## Quick start
 
-**Disk / time:** default `make setup` builds api + web + nginx only (**~15 GB** free is a sensible minimum). Optional mail inbox (`COMPOSE_PROFILES=mail`) adds localfakemail builds and needs more disk/time. Details: [`docs/local-development.md`](docs/local-development.md).
+**Disk / time:** default `make setup` builds api + web + nginx. Free space must be on **Docker’s data filesystem** (often `/var/lib/docker` on `/`), not only on `/home` where you cloned the repo — see [`docs/local-development.md`](docs/local-development.md). Optional mail: `COMPOSE_PROFILES=mail`.
 
 ```bash
 cp .env.example .env
